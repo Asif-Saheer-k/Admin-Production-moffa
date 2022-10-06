@@ -49,7 +49,7 @@ router.route("/wholesaler/:id").post(verifyToken, makeWholesaler);
 //view all wholesalers
 router.route("/all-wholesaler").get(verifyToken, viewAllWholsalers);
 //convent wholesaler to user function
-router.route("/convert-user/:id").post(verifyToken, makeUser);
+router.route("/convert-user/:id").post(verifyToken, makeUser);   
 //make admin
 router.route("/add-admin").post(verifyToken, MakeAdmin);
 //view all admin

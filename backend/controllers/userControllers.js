@@ -7,6 +7,7 @@ const Paytm = require("paytmchecksum");
 const verification = require("../middleware/tiwllioVerification");
 const PaytmChecksum = require("../utils/PaytmCecksum");
 const fromidable = require("formidable");
+const { v4: uuidv4 } = require("uuid");
 const https = require("https");
 
 //login deatails
@@ -60,7 +61,6 @@ const Phoneverification = asyncHandler(async (req, res) => {
     .sort({ _id: -1 })
     .limit(1)
     .toArray();
-  console.log(UserId);
   let ID;
   if (UserId[0]) {
     console.log(UserId[0].CUST_ID);
@@ -258,6 +258,8 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
   const message = req.body?.message;
   const State = req.body.State;
   const user = req.body.user;
+  const DeliveyCharge = req.body.DeliveyCharge;
+  const DeliveryType = req.body.DeliveryType;
   var Role = "user";
   if (!user) {
     Role = "wholesaler";
@@ -347,6 +349,8 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
       Date: date,
       user: user,
       role: Role,
+      DeliveyCharge: DeliveyCharge,
+      DeliveryType: DeliveryType,
       wallet: Applywallet,
       status: "Pending",
       Payment: "Pending",
@@ -362,6 +366,8 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
       Date: date,
       user: user,
       role: Role,
+      DeliveyCharge: DeliveyCharge,
+      DeliveryType: DeliveryType,
       status: "Pending",
       Payment: "Pending",
     };
@@ -371,6 +377,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
   // req.session.orderProducts = OrderObject;
 
   //find quantity function
+  const uuid = uuidv4();
 
   OderProducts.map(async (products) => {
     const product = await db
@@ -384,30 +391,38 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
             if (sizesObj.stock != 0) {
               var paytmParams = {};
               paytmParams["MID"] = process.env.MID;
-              paytmParams["ORDER_ID"] = "fafafs4353";
+              paytmParams["ORDER_ID"] = uuid;
               paytmParams["TXN_AMOUNT"] = `${Amount}`;
               paytmParams["WEBSITE"] = process.env.WEBSITE;
               paytmParams["INDUSTRY_TYPE_ID"] = process.env.INDUSTRY_TYPE_ID;
               paytmParams["CHANNEL_ID"] = process.env.CHANNEL_ID;
-              paytmParams["CUST_ID"] = "4r4353";
+              paytmParams["CUST_ID"] = ID;
               paytmParams["MOBILE_NO"] = PhoneNumber;
               paytmParams["EMAIL"] = Email;
               paytmParams["CALLBACK_URL"] = process.env.CALLBACK_URL;
-              var paytmChecksum = PaytmChecksum.generateSignature(
-                paytmParams,
-                `${process.env.KEY}#`
-              );
-              paytmChecksum
-                .then(function (result) {
-                  let Params = {
-                    ...paytmParams,
-                    CHECKSUMHASH: result,
-                  };
-                  res.status(200).json(Params);
-                })
-                .catch(function (error) {
-                  console.log(error);
-                });
+
+              //chack order products
+              const order = req.session.orderProducts;
+              if (!order) {
+                
+                res.status(500).json("refresh");
+              } else {
+                var paytmChecksum = PaytmChecksum.generateSignature(
+                  paytmParams,
+                  `${process.env.KEY}#`
+                );
+                paytmChecksum
+                  .then(function (result) {
+                    let Params = {
+                      ...paytmParams,
+                      CHECKSUMHASH: result,
+                    };
+                    res.status(200).json(Params);
+                  })
+                  .catch(function (error) {
+                    console.log(error);
+                  });
+              }
             } else {
               res.status(404).json("Products out of stock");
             }
@@ -493,6 +508,7 @@ const Callbackfunction = asyncHandler((req, res) => {
           post_res.on("end", async function () {
             const result = JSON.parse(response);
             if (result.body.resultInfo.resultStatus == "TXN_SUCCESS") {
+              console.log(req.session.orderProducts,"ASXXXX");
               const ID = req.session.orderProducts.CUST_ID;
               const User = req.session.orderProducts.user;
               let Applywallet = req.session?.Applywallet;
@@ -517,7 +533,7 @@ const Callbackfunction = asyncHandler((req, res) => {
                   .get()
                   .collection(collection.PRODUCT_COLLECTION)
                   .findOne({ id: products.ProductID });
-                product.variation.map(async (obj, indexes) => {
+                product.variation.map(async (obj, indexes) => { 
                   if (obj.color == products.color) {
                     obj.size.map(async (sizesObj, index) => {
                       if (sizesObj.name == products.size) {
@@ -564,18 +580,21 @@ const Callbackfunction = asyncHandler((req, res) => {
                   }
                 });
               });
+              console.log(result.body.resultInfo.resultStatus);
+
               const success = await db
                 .get()
                 .collection(collection.ORDER_COLLECTION)
                 .insertOne(order);
               if (success) {
-                return res.redirect("/cart");
+                req.session.orderProducts = null;
+                req.session.Applywallet = null;
+                return res.redirect("/success");
               } else {
                 return res.redirect("/error");
               }
-            }
-            if (result.body.resultInfo.resultStatus == "PENDING") {
-              console.log(result.body.resultInfo.resultMsg);
+            } else if (result.body.resultInfo.resultStatus == "PENDING") {
+              res.redirect("/error");
             } else {
               res.send(result.body.resultInfo.resultMsg);
               console.log(result.body.resultInfo.resultMsg);
@@ -1121,7 +1140,6 @@ const TakeUserDeatails = asyncHandler(async (req, res) => {
       res.status(500).json("Somthing Went Wrong");
     }
   } else {
-    console.log("wholesaler");
     const wholesalerDeatails = await db
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
@@ -1247,19 +1265,152 @@ const getMyorderProduts = asyncHandler(async (req, res) => {
     res.status(500).json("Somthing Went Wrong");
   }
 });
+
+//add wallet Amount
+const AddWalletAmount = asyncHandler((req, res) => {
+  const Amount = req.body.Amount;
+  const ID = req.body.ID;
+  const phone = req.body.phone;
+  const email = req.body.email;
+  const userId = uuidv4();
+  req.session.wholeSalerID = ID;
+  req.session.wholeSalerIDAmount = Amount;
+  var paytmParams = {};
+  paytmParams["MID"] = process.env.MID;
+  paytmParams["ORDER_ID"] = userId;
+  paytmParams["TXN_AMOUNT"] = Amount;
+  paytmParams["WEBSITE"] = process.env.WEBSITE;
+  paytmParams["INDUSTRY_TYPE_ID"] = process.env.INDUSTRY_TYPE_ID;
+  paytmParams["CHANNEL_ID"] = process.env.CHANNEL_ID;
+  paytmParams["CUST_ID"] = ID;
+  paytmParams["MOBILE_NO"] = phone;
+  paytmParams["EMAIL"] = email;
+  paytmParams["CALLBACK_URL"] =
+    "http://localhost:3000/api/user/add-wallet-ammount";
+  var paytmChecksum = PaytmChecksum.generateSignature(
+    paytmParams,
+    `${process.env.KEY}#`
+  );
+
+  paytmChecksum
+    .then(function (result) {
+      let Params = {
+        ...paytmParams,
+        CHECKSUMHASH: result,
+      };
+      res.status(200).json(Params);
+    })
+    .catch(function (error) {
+      res.status(500).json("Somthing Went Wrong");
+    });
+});
+//add wallet amount
+const verifyWalletAmount = asyncHandler((req, res) => {
+  const from = new fromidable.IncomingForm();
+  from.parse(req, (err, field, file) => {
+    var paytmChecksum = "";
+    const received_data = field;
+
+    var paytmParams = {};
+    for (var key in received_data) {
+      if (key == "CHECKSUMHASH") {
+        paytmChecksum = received_data[key];
+      } else {
+        paytmParams[key] = received_data[key];
+      }
+    }
+    var isVerifySignature = PaytmChecksum.verifySignature(
+      paytmParams,
+      `${process.env.KEY}#`,
+      paytmChecksum
+    );
+    if (isVerifySignature) {
+      /* initialize an object */
+      var paytmParams = {};
+
+      /* body parameters */
+      paytmParams.body = {
+        /* Find your MID in your Paytm Dashboard at https://dashboard.paytm.com/next/apikeys */
+        mid: field.MID,
+
+        /* Enter your order id which needs to be check status for */
+        orderId: field.ORDERID,
+      };
+      /**
+       * Generate checksum by parameters we have in body
+       * Find your Merchant Key in your Paytm Dashboard at https://dashboard.paytm.com/next/apikeys
+       */
+      PaytmChecksum.generateSignature(
+        JSON.stringify(paytmParams.body),
+        `${process.env.KEY}#`
+      ).then(function (checksum) {
+        /* head parameters */
+        paytmParams.head = {
+          /* put generated checksum value here */
+          signature: checksum,
+        };
+
+        /* prepare JSON string for request */
+        var post_data = JSON.stringify(paytmParams);
+
+        var options = {
+          /* for Staging */
+          hostname: "securegw-stage.paytm.in",
+
+          /* for Production */
+          // hostname: 'securegw.paytm.in',
+
+          port: 443,
+          path: "/v3/order/status",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": post_data.length,
+          },
+        };
+        var amount = req.session.wholeSalerIDAmount;
+        var ID = req.session.wholeSalerID;
+
+        // Set up the request
+        var response = "";
+        var post_req = https.request(options, function (post_res) {
+          post_res.on("data", function (chunk) {
+            response += chunk;
+          });
+          post_res.on("end", async function () {
+            const result = JSON.parse(response);
+            if (result.body.resultInfo.resultStatus == "TXN_SUCCESS") {
+              const updateAmount = await db
+                .get()
+                .collection(collection.WHOLESALER_COLLECTION)
+                .updateOne(
+                  { CUST_ID: ID },
+                  { $inc: { wallet: parseInt(amount) } }
+                );
+              return res.redirect("/my-account");
+            } else if (result.body.resultInfo.resultStatus == "PENDING") {
+              return res.redirect("/error");
+            } else {
+              res.send(result.body.resultInfo.resultMsg);
+              return res.redirect("/error");
+            }
+          });
+        });
+
+        post_req.write(post_data);
+        post_req.end();
+      });
+    } else {
+      return res.redirect("/error");
+    }
+  });
+});
 module.exports = {
   registerUser,
   Phoneverification,
   loginUser,
   VerifyPhone,
   cheackOtp,
-  // getCartProduct,
-  // removeProductCart,
-  // changeProductQuantity,
-  // getCartCount,
-  // getTotalAmount,
-  // addWishilist,
-  // getwishilist,
   PaytmIntegration,
   Callbackfunction,
   getTodayDeals,
@@ -1272,4 +1423,6 @@ module.exports = {
   DeleteuserAddress,
   getMyOrders,
   getMyorderProduts,
+  AddWalletAmount,
+  verifyWalletAmount,
 };

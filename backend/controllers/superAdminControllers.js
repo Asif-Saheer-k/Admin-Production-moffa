@@ -237,9 +237,9 @@ const verifyWholesalers = asyncHandler((req, res) => {
           const phoneNumber = wholeSaler.phone;
           const message = await verification.SendMessage(
             phoneNumber,
-            "Admin verified your deatails. happy shopping"
+            "Admin verified your deatails. happy shopping" 
           );
-
+ 
           res.status(200).json({ success: true });
         } else {
           res.status(500).json({ error: "Somthing went wrong ...." });
