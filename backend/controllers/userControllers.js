@@ -68,7 +68,6 @@ const Phoneverification = asyncHandler(async (req, res) => {
     .toArray();
   let ID;
   if (UserId[0]) {
-    console.log(UserId[0].CUST_ID);
     ID = UserId[0]?.CUST_ID + 1;
   } else {
     ID = 10000000;
@@ -77,8 +76,7 @@ const Phoneverification = asyncHandler(async (req, res) => {
   const Otp = req.params.otp;
   const userData = req.session.userDeatails;
   userData.CUST_ID = ID;
-  console.log(userData.phone);
-  console.log(Otp);
+
   if (!req.session.userDeatails) {
     res.status(500).json("Somthing went wrong");
   }
@@ -567,7 +565,6 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
               //chack order products
               const order = req.session.orderProducts;
 
-              console.log(order, "Session error");
               if (!order) {
                 res.status(500).json("refresh");
               } else {
@@ -582,12 +579,10 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
                       CHECKSUMHASH: result,
                       orderProducts: order,
                     };
-                    console.log(Params, "DDC");
+
                     res.status(200).json(Params);
                   })
-                  .catch(function (error) {
-                    console.log(error);
-                  });
+                  .catch(function (error) {});
               }
             } else {
               res.status(404).json("Products out of stock");
@@ -600,10 +595,8 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
 });
 
 const Callbackfunction = asyncHandler((req, res) => {
-  console.log("callback");
   const from = new fromidable.IncomingForm();
   from.parse(req, (err, field, file) => {
-    console.log(field, "FSDFSFS");
     var paytmChecksum = "";
     const received_data = field;
     var paytmParams = {};
@@ -674,10 +667,7 @@ const Callbackfunction = asyncHandler((req, res) => {
 
           post_res.on("end", async function () {
             const result = JSON.parse(response);
-            console.log(
-              result.body.resultInfo.resultStatus,
-              "LLLLLLLLLLLLLLLLLLL"
-            );
+
             if (result.body.resultInfo.resultStatus == "TXN_SUCCESS") {
               const ID = req.session.orderProducts.CUST_ID;
               const User = req.session.orderProducts.user;
@@ -707,8 +697,6 @@ const Callbackfunction = asyncHandler((req, res) => {
                   if (obj.color == products.color) {
                     obj.size.map(async (sizesObj, index) => {
                       if (sizesObj.name == products.size) {
-                        console.log(sizesObj.stock);
-                        console.log(products.quantity);
                         const updateStock = sizesObj.stock - products.quantity;
                         if (updateStock == 0) {
                           const obj = {
@@ -774,7 +762,6 @@ const Callbackfunction = asyncHandler((req, res) => {
 });
 // add to cart
 const addToCart = asyncHandler(async (req, res) => {
-  console.log(req.body);
   const proId = req.body.ProId;
   const userId = req.body.userId;
   const color = req.body.color;
@@ -785,7 +772,7 @@ const addToCart = asyncHandler(async (req, res) => {
     color,
     size,
   };
-  console.log(proObj);
+
   let userCart = await db
     .get()
     .collection(collection.CART_COLLECTION)
@@ -1201,16 +1188,15 @@ const removeYesterDayDeal = asyncHandler(async (req, res) => {
     .get()
     .collection(collection.DEAL_OF_THE_DAY)
     .deleteOne({ date: PreviousDay });
-  console.log(deletes, "");
+
   if (deletes) {
     await db
       .get()
       .collection(collection.PRODUCT_COLLECTION)
       .updateOne({ "Deal.date": PreviousDay }, { $unset: { Deal: " " } });
-    console.log("kk");
+
     res.status(200).json("Success");
   } else {
-    console.log("ll");
     res.status(500).json("Somthing Went Wrong");
   }
 });
@@ -1235,7 +1221,6 @@ const removePreviousDeals = asyncHandler(async (req, res) => {
   const month = today.getMonth() + 1;
   const year = today.getFullYear();
   const PreviousDay = day + "/" + montharay[month] + "/" + year;
-  console.log(PreviousDay, "s");
   await db
     .get()
     .collection(collection.DEAL_OF_THE_DAY)
@@ -1464,7 +1449,6 @@ const AddWalletAmount = asyncHandler((req, res) => {
       res.status(200).json(Params);
     })
     .catch(function (error) {
-      console.log(error);
       res.status(500).json("Somthing Went Wrong");
     });
 });
@@ -1544,12 +1528,8 @@ const verifyWalletAmount = asyncHandler((req, res) => {
           });
           post_res.on("end", async function () {
             const result = JSON.parse(response);
-            console.log(
-              result.body.resultInfo.resultStatus,
-              "LLLLLLLLLLLLLLLLLLL"
-            );
+
             if (result.body.resultInfo.resultStatus == "TXN_SUCCESS") {
-              console.log(ID, amount, "session error");
               const updateAmount = await db
                 .get()
                 .collection(collection.WHOLESALER_COLLECTION)
@@ -1762,8 +1742,6 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
       if (obj.color == products.color) {
         obj.size.map(async (sizesObj, index) => {
           if (sizesObj.name == products.size) {
-            console.log(sizesObj.stock);
-            console.log(products.quantity);
             const updateStock = sizesObj.stock - products.quantity;
             if (updateStock == 0) {
               const obj = {
@@ -1828,6 +1806,43 @@ const deleteuserCart = asyncHandler(async (req, res) => {
     res.status(500).json("Somthing went wrong");
   }
 });
+//amount add to wallet through razorpay
+const AddAmountToWalletRazorpay = asyncHandler(async (req, res) => {
+  const amount = req.body.Amount;
+  try {
+    const options = {
+      amount: amount * 100, // amount in smallest currency unit
+      currency: "INR",
+      receipt: "receipt_order_74394",
+    };
+    const order = await razorpay.orders.create(options);
+    if (!order) return res.status(500).send("Some error occured");
+    res.status(200).json(order);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+//add amount to wallet
+const AddAmountToWallet = asyncHandler(async (req, res) => {
+  const ID = req.body.id;
+  const amount = req.body.Amount;
+
+  const updatewallet = await db
+    .get()
+    .collection(collection.WHOLESALER_COLLECTION)
+    .updateOne(
+      {
+        CUST_ID: parseInt(ID),
+      },
+      { $inc: { wallet: parseInt(amount) } }
+    );
+  if (updatewallet) {
+    res.status(200).json("Success");
+  } else {
+    res.status(500).json("Somthing Went wrong");
+  }
+});
 module.exports = {
   addToCart,
   registerUser,
@@ -1855,4 +1870,6 @@ module.exports = {
   rezorpayOrder,
   createOrderObjct,
   deleteuserCart,
+  AddAmountToWalletRazorpay,
+  AddAmountToWallet,
 };
