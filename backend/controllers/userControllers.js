@@ -101,13 +101,13 @@ const Phoneverification = asyncHandler(async (req, res) => {
 
 //login user
 const loginUser = asyncHandler(async (req, res) => {
-  const Email = req.body.email;
+  const Phone = req.body.phone;
   const Password = req.body.password;
   //check email in database
   const userDeatails = await db
     .get()
     .collection(collection.USER_COLLECTION)
-    .findOne({ email: Email });
+    .findOne({ phone: Phone });
   if (userDeatails) {
     //compate entered password and database password
     bcrypt.compare(Password, userDeatails.password).then(async (status) => {
@@ -170,10 +170,11 @@ const loginUser = asyncHandler(async (req, res) => {
       }
     });
   } else {
+    console.log(Phone);
     const Wholesaler = await db
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
-      .findOne({ email: Email });
+      .findOne({ phone: Phone });
 
     if (Wholesaler) {
       bcrypt.compare(Password, Wholesaler.password).then(async (status) => {
@@ -237,7 +238,7 @@ const loginUser = asyncHandler(async (req, res) => {
         }
       });
     } else {
-      res.status(401).json("Invalid Email Address");
+      res.status(401).json("Invalid Phone Number");
     }
   }
 });
@@ -406,6 +407,7 @@ const cheackOtp = asyncHandler(async (req, res) => {
 
 //payment integration function
 const PaytmIntegration = asyncHandler(async (req, res) => {
+  var fromAddress;
   let Amount = req.body.totamAmount;
   const ID = req.body.CUST_ID;
   const Name = req.body.Name;
@@ -419,8 +421,29 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
   const message = req.body?.message;
   const State = req.body.State;
   const user = req.body.user;
+  if (!user) {
+    const FromName = req.body.FromName;
+    const FromLastName = req.body.FromLastName;
+    const FromPostcode = req.body.FromPostcode;
+    const FromStreetAddress = req.body.FromStreetAddress;
+    const FromTownCity = req.body.FromTownCity;
+    const FromPhoneNumber = req.body.FromPhoneNumber;
+    const FromEmail = req.body.FromEmail;
+    const FromState=req.body.FromState
+    fromAddress = {
+      FromName,
+      FromLastName,
+      FromPostcode,
+      FromStreetAddress,
+      FromTownCity,
+      FromPhoneNumber,
+      FromEmail,
+      FromState
+    };
+  }
   const DeliveyCharge = req.body.DeliveyCharge;
   const DeliveryType = req.body.DeliveryType;
+  const payment_type = req.body.payment_type;
   var Role = "user";
   if (!user) {
     Role = "wholesaler";
@@ -459,6 +482,17 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
         $set: { Address: address },
       }
     );
+  if (!user) {
+    await db
+      .get()
+      .collection(collection.WHOLESALER_COLLECTION)
+      .updateOne(
+        { CUST_ID: ID },
+        {
+          $set: { FromAddress: fromAddress },
+        }
+      );
+  }
 
   //address storing
   req.session.Address = address;
@@ -507,32 +541,55 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
       Total: Amount,
       Product: OderProducts,
       Address: address,
+      FromAddress: fromAddress,
       Date: date,
       user: user,
       role: Role,
       DeliveyCharge: DeliveyCharge,
       DeliveryType: DeliveryType,
       wallet: Applywallet,
+      payment_type: payment_type,
       status: "Pending",
       Payment: "Pending",
     };
     req.session.orderProducts = OrderObject;
   } else {
-    const OrderObject = {
-      Id: OrderId,
-      CUST_ID: ID,
-      Total: Amount,
-      Product: OderProducts,
-      Address: address,
-      Date: date,
-      user: user,
-      role: Role,
-      DeliveyCharge: DeliveyCharge,
-      DeliveryType: DeliveryType,
-      status: "Pending",
-      Payment: "Pending",
-    };
-    req.session.orderProducts = OrderObject;
+    if (user) {
+      const OrderObject = {
+        Id: OrderId,
+        CUST_ID: ID,
+        Total: Amount,
+        Product: OderProducts,
+        Address: address,
+        Date: date,
+        user: user,
+        role: Role,
+        DeliveyCharge: DeliveyCharge,
+        DeliveryType: DeliveryType,
+        payment_type: payment_type,
+        status: "Pending",
+        Payment: "Pending",
+      };
+      req.session.orderProducts = OrderObject;
+    } else {
+      const OrderObject = {
+        Id: OrderId,
+        CUST_ID: ID,
+        Total: Amount,
+        Product: OderProducts,
+        Address: address,
+        FromAddress: fromAddress,
+        Date: date,
+        user: user,
+        role: Role,
+        DeliveyCharge: DeliveyCharge,
+        DeliveryType: DeliveryType,
+        payment_type: payment_type,
+        status: "Pending",
+        Payment: "Pending",
+      };
+      req.session.orderProducts = OrderObject;
+    }
   }
   // storing order object in session
   // req.session.orderProducts = OrderObject;
@@ -1274,7 +1331,7 @@ const TakeUserDeatails = asyncHandler(async (req, res) => {
     const userDeatails = await db
       .get()
       .collection(collection.USER_COLLECTION)
-      .findOne({ phone: Deatails.phones });
+      .findOne({ CUST_ID: parseInt(Deatails.id) });
     if (userDeatails) {
       const obj = {
         name: userDeatails.name,
@@ -1292,7 +1349,7 @@ const TakeUserDeatails = asyncHandler(async (req, res) => {
     const wholesalerDeatails = await db
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
-      .findOne({ phone: Deatails.phones });
+      .findOne({ CUST_ID: parseInt(Deatails.id) });
     if (wholesalerDeatails) {
       const obj = {
         name: wholesalerDeatails.name,
@@ -1301,6 +1358,7 @@ const TakeUserDeatails = asyncHandler(async (req, res) => {
         wallet: wholesalerDeatails.wallet,
         user: false,
         Address: wholesalerDeatails.Address,
+        FromAddress:wholesalerDeatails?.FromAddress
       };
       res.status(200).json(obj);
     } else {
@@ -1552,6 +1610,7 @@ const verifyWalletAmount = asyncHandler((req, res) => {
   });
 });
 const createOrderObjct = asyncHandler(async (req, res) => {
+  var fromAddress;
   let Amount = req.body.totamAmount;
   const ID = req.body.CUST_ID;
   const Name = req.body.Name;
@@ -1565,8 +1624,29 @@ const createOrderObjct = asyncHandler(async (req, res) => {
   const message = req.body?.message;
   const State = req.body.State;
   const user = req.body.user;
+  if (!user) {
+    const FromName = req.body.FromName;
+    const FromLastName = req.body.FromLastName;
+    const FromPincode = req.body.FromPostcode;
+    const FromStreetAddress = req.body?.FromStreetAddress;
+    const FromTownCity = req.body.FromTownCity;
+    const FromPhoneNumber = req.body.FromPhoneNumber;
+    const FromEmail = req.body.FromEmail;
+    const FromState=req.body.FromState
+    fromAddress = {
+      FromName,
+      FromLastName,
+      FromPincode,
+      FromStreetAddress,
+      FromTownCity,
+      FromPhoneNumber,
+      FromEmail,
+      FromState
+    };
+  }
   const DeliveyCharge = req.body.DeliveyCharge;
   const DeliveryType = req.body.DeliveryType;
+  const payment_type = req.body.payment_type;
   var Role = "user";
   if (!user) {
     Role = "wholesaler";
@@ -1593,15 +1673,28 @@ const createOrderObjct = asyncHandler(async (req, res) => {
     .get()
     .collection(collection.USER_COLLECTION)
     .updateOne({ CUST_ID: ID }, { $set: { Address: address } });
-  await db
-    .get()
-    .collection(collection.WHOLESALER_COLLECTION)
-    .updateOne(
-      { CUST_ID: ID },
-      {
-        $set: { Address: address },
-      }
-    );
+  if (!addAddress) {
+    await db
+      .get()
+      .collection(collection.WHOLESALER_COLLECTION)
+      .updateOne(
+        { CUST_ID: ID },
+        {
+          $set: { Address: address },
+        }
+      );
+  }
+  if (!user) {
+    await db
+      .get()
+      .collection(collection.WHOLESALER_COLLECTION)
+      .updateOne(
+        { CUST_ID: ID },
+        {
+          $set: { FromAddress: fromAddress },
+        }
+      );
+  }
   //address storing
   req.session.Address = address;
   //order product storing in seesion
@@ -1648,32 +1741,53 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       Total: Amount,
       Product: OderProducts,
       Address: address,
+      FromAddress: fromAddress,
       Date: date,
       user: user,
       role: Role,
       DeliveyCharge: DeliveyCharge,
       DeliveryType: DeliveryType,
       wallet: Applywallet,
+      payment_type: payment_type,
       status: "Pending",
       Payment: "Pending",
     };
     req.session.orderProducts = OrderObject;
   } else {
-    const OrderObject = {
-      Id: OrderId,
-      CUST_ID: ID,
-      Total: Amount,
-      Product: OderProducts,
-      Address: address,
-      Date: date,
-      user: user,
-      role: Role,
-      DeliveyCharge: DeliveyCharge,
-      DeliveryType: DeliveryType,
-      status: "Pending",
-      Payment: "Pending",
-    };
-    req.session.orderProducts = OrderObject;
+    if (user) {
+      const OrderObject = {
+        Id: OrderId,
+        CUST_ID: ID,
+        Total: Amount,
+        Product: OderProducts,
+        Address: address,
+        Date: date,
+        user: user,
+        role: Role,
+        DeliveyCharge: DeliveyCharge,
+        DeliveryType: DeliveryType,
+        status: "Pending",
+        Payment: "Pending",
+      };
+      req.session.orderProducts = OrderObject;
+    } else {
+      const OrderObject = {
+        Id: OrderId,
+        CUST_ID: ID,
+        Total: Amount,
+        Product: OderProducts,
+        Address: address,
+        FromAddress: fromAddress,
+        Date: date,
+        user: user,
+        role: Role,
+        DeliveyCharge: DeliveyCharge,
+        DeliveryType: DeliveryType,
+        status: "Pending",
+        Payment: "Pending",
+      };
+      req.session.orderProducts = OrderObject;
+    }
   }
   // storing order object in session
   // req.session.orderProducts = OrderObject;
