@@ -35,7 +35,8 @@ const {
   DeleteStock,
   DispatchOrder,
   viewALLDispatchOrders,
-  updatedWallet
+  updatedWallet,
+  ChangeOrderStatus
   
 } = require("../controllers/superAdminControllers");
 
@@ -111,6 +112,8 @@ router.route('/dispatch-order').post(verifyToken,DispatchOrder)
 router.route('/view-dispatch-orders').get(verifyToken,viewALLDispatchOrders)
 //change wholsaler wallet amount
 router.route('/update-wholsaler-wallet').post(updatedWallet)
+//change order status 
+router.route('/Change-order-status').post(verifyToken,ChangeOrderStatus)
 
 module.exports = router;  
    

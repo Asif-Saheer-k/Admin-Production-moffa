@@ -405,7 +405,7 @@ const getAllOrders = asyncHandler(async (req, res) => {
   const order = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
-    .find({ status: "Pending" })
+    .find({ $or: [{ status: "Pending" }, { status: "Packed" }] })
     .sort({ _id: -1 })
     .toArray();
   if (order) {
@@ -718,6 +718,28 @@ const updatedWallet = asyncHandler(async (req, res) => {
     res.status(500).json("Somthing Went wrong");
   }
 });
+const ChangeOrderStatus = asyncHandler(async (req, res) => {
+  console.log(req.body);
+  const newstatus = req.body.status;
+  const order_id = req.body.orderId;
+  const change = await db
+    .get()
+    .collection(collection.ORDER_COLLECTION)
+    .updateOne(
+      { Id: parseInt(order_id) },
+      {
+        $set: {
+          status: newstatus,
+        },
+      }
+    );
+  console.log(change);
+  if (change) {
+    res.status(200).json("Success");
+  } else {
+    res.status(500).json("Somthing went wrong");
+  }
+});
 
 module.exports = {
   verifyAdmin,
@@ -754,4 +776,5 @@ module.exports = {
   DispatchOrder,
   viewALLDispatchOrders,
   updatedWallet,
+  ChangeOrderStatus,
 };

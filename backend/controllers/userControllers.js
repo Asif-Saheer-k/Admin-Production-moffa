@@ -421,6 +421,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
   const message = req.body?.message;
   const State = req.body.State;
   const user = req.body.user;
+  const Service = req.body.Service;
   if (!user) {
     const FromName = req.body.FromName;
     const FromLastName = req.body.FromLastName;
@@ -429,7 +430,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
     const FromTownCity = req.body.FromTownCity;
     const FromPhoneNumber = req.body.FromPhoneNumber;
     const FromEmail = req.body.FromEmail;
-    const FromState=req.body.FromState
+    const FromState = req.body.FromState;
     fromAddress = {
       FromName,
       FromLastName,
@@ -438,7 +439,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
       FromTownCity,
       FromPhoneNumber,
       FromEmail,
-      FromState
+      FromState,
     };
   }
   const DeliveyCharge = req.body.DeliveyCharge;
@@ -547,6 +548,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
       role: Role,
       DeliveyCharge: DeliveyCharge,
       DeliveryType: DeliveryType,
+      Courier: Service,
       wallet: Applywallet,
       payment_type: payment_type,
       status: "Pending",
@@ -567,6 +569,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
         DeliveyCharge: DeliveyCharge,
         DeliveryType: DeliveryType,
         payment_type: payment_type,
+        Courier: Service,
         status: "Pending",
         Payment: "Pending",
       };
@@ -584,6 +587,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
         role: Role,
         DeliveyCharge: DeliveyCharge,
         DeliveryType: DeliveryType,
+        Courier: Service,
         payment_type: payment_type,
         status: "Pending",
         Payment: "Pending",
@@ -1358,7 +1362,7 @@ const TakeUserDeatails = asyncHandler(async (req, res) => {
         wallet: wholesalerDeatails.wallet,
         user: false,
         Address: wholesalerDeatails.Address,
-        FromAddress:wholesalerDeatails?.FromAddress
+        FromAddress: wholesalerDeatails?.FromAddress,
       };
       res.status(200).json(obj);
     } else {
@@ -1624,6 +1628,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
   const message = req.body?.message;
   const State = req.body.State;
   const user = req.body.user;
+  const Service = req.body.Service;
   if (!user) {
     const FromName = req.body.FromName;
     const FromLastName = req.body.FromLastName;
@@ -1632,7 +1637,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
     const FromTownCity = req.body.FromTownCity;
     const FromPhoneNumber = req.body.FromPhoneNumber;
     const FromEmail = req.body.FromEmail;
-    const FromState=req.body.FromState
+    const FromState = req.body.FromState;
     fromAddress = {
       FromName,
       FromLastName,
@@ -1641,7 +1646,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       FromTownCity,
       FromPhoneNumber,
       FromEmail,
-      FromState
+      FromState,
     };
   }
   const DeliveyCharge = req.body.DeliveyCharge;
@@ -1747,6 +1752,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       role: Role,
       DeliveyCharge: DeliveyCharge,
       DeliveryType: DeliveryType,
+      Courier: Service,
       wallet: Applywallet,
       payment_type: payment_type,
       status: "Pending",
@@ -1765,6 +1771,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         user: user,
         role: Role,
         DeliveyCharge: DeliveyCharge,
+        Courier: Service,
         DeliveryType: DeliveryType,
         status: "Pending",
         Payment: "Pending",
@@ -1782,6 +1789,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         user: user,
         role: Role,
         DeliveyCharge: DeliveyCharge,
+        Courier: Service,
         DeliveryType: DeliveryType,
         status: "Pending",
         Payment: "Pending",
