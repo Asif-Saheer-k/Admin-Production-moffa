@@ -36,7 +36,8 @@ const {
   createOrderObjct,
   deleteuserCart,
   AddAmountToWalletRazorpay,
-  AddAmountToWallet
+  AddAmountToWallet,
+  verificationPayment
 } = require("../controllers/userControllers");
 const { verifyToken } = require("../middleware/tokenVerification");
 //login routes using email,pssword
@@ -99,6 +100,8 @@ router.route('/create-order-object').post(createOrderObjct)
 router.route('/add-amount-razorpay').post(verifyToken,AddAmountToWalletRazorpay)
 //add amount to wallet 
 router.route('/add-amount-to-wallet').post(AddAmountToWallet)
+//payment verification routes
+router.route('/verify-razorpay-payment').post(verificationPayment)
 
 
 module.exports = router;

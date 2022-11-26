@@ -2,12 +2,14 @@ const asyncHandler = require("express-async-handler");
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const generateToken = require("../utils/jwtToken");
+const sms = require("../middleware/sms");
 const collection = require("../config/collection");
 const Paytm = require("paytmchecksum");
 const verification = require("../middleware/tiwllioVerification");
 const PaytmChecksum = require("../utils/PaytmCecksum");
 const fromidable = require("formidable");
 const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
 const https = require("https");
 const Razorpay = require("razorpay");
 
@@ -19,6 +21,9 @@ const razorpay = new Razorpay({
 //user register controller with otp verification
 const registerUser = asyncHandler(async (req, res) => {
   req.session.userDeatails = req.body;
+  const OTP = Math.random().toFixed(6).split(".")[1];
+  console.log(OTP);
+  req.session.userDeatails.otp = OTP;
   const phoneNumber = req.session.userDeatails.phone;
   // Phone number cheacking in database
   const checkPhone = await db
@@ -36,7 +41,8 @@ const registerUser = asyncHandler(async (req, res) => {
     if (checkPhoneWholsesaler) {
       res.status(401).json("Phone Number Already Exists");
     } else {
-      // no registerd number
+      // OTP sented function
+      sms.sendOTP(phoneNumber, OTP);
       const code = await verification.sendOtp(req.session.userDeatails.phone);
       if (code) {
         res.status(200).json("OTP Sented Successfully");
@@ -49,11 +55,18 @@ const registerUser = asyncHandler(async (req, res) => {
 
 //reset otp function
 const ResetOtpSend = asyncHandler(async (req, res) => {
-  const code = await verification.sendOtp(req.session.userDeatails.phone);
-  if (code) {
-    res.status(200).json("OTP Sented Successfully");
+  if (req.session.userDeatails) {
+    const phoneNumber = req.session.userDeatails.phone;
+    const OTP = req.session.userDeatails.otp;
+    sms.sendOTP(phoneNumber, OTP);
+    // const code = await verification.sendOtp(req.session.userDeatails.phone);
+    if (code) {
+      res.status(200).json("OTP Sented Successfully");
+    } else {
+      res.status(401).json("Invalid Phone number");
+    }
   } else {
-    res.status(401).json("Invalid Phone number");
+    res.status(500).json("Somthing went wrong");
   }
 });
 
@@ -72,30 +85,31 @@ const Phoneverification = asyncHandler(async (req, res) => {
   } else {
     ID = 10000000;
   }
+  if (req.session.userDeatails) {
+    const eneterOtp = req.params.otp;
+    const userData = req.session.userDeatails;
+    userData.CUST_ID = ID;
 
-  const Otp = req.params.otp;
-  const userData = req.session.userDeatails;
-  userData.CUST_ID = ID;
-
-  if (!req.session.userDeatails) {
-    res.status(500).json("Somthing went wrong");
-  }
-  const phoneNumber = req.session.userDeatails.phone;
-  userData.password = await bcrypt.hash(userData.password, 10);
-  const code = await verification.CheckOtp(phoneNumber, Otp);
-  // check valid true or false
-  if (code.valid) {
-    const User = await db
-      .get()
-      .collection(collection.USER_COLLECTION)
-      .insertOne(userData);
-    if (User) {
-      res.status(200).json("successfuly reagisted");
+    const phoneNumber = req.session.userDeatails.phone;
+    const OTP = req.session.userDeatails.otp;
+    userData.password = await bcrypt.hash(userData.password, 10);
+    // const code = await verification.CheckOtp(phoneNumber, Otp);
+    // check valid true or false
+    if (eneterOtp == OTP) {
+      const User = await db
+        .get()
+        .collection(collection.USER_COLLECTION)
+        .insertOne(userData);
+      if (User) {
+        res.status(200).json("successfuly reagisted");
+      } else {
+        res.status(500).json("Somthing went wrong");
+      }
     } else {
-      res.status(500).json("Somthing went wrong");
+      res.status(401).json("Please Verify OTP");
     }
   } else {
-    res.status(401).json("Please Verify OTP");
+    res.status(500).json("Somthing went wrong");
   }
 });
 
@@ -170,7 +184,6 @@ const loginUser = asyncHandler(async (req, res) => {
       }
     });
   } else {
-    console.log(Phone);
     const Wholesaler = await db
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
@@ -246,13 +259,16 @@ const loginUser = asyncHandler(async (req, res) => {
 //otp login verify phone number function
 const VerifyPhone = asyncHandler(async (req, res) => {
   const phoneNumber = req.body.phone;
+  const OTP = Math.random().toFixed(6).split(".")[1];
   const userDeatails = await db
     .get()
     .collection(collection.USER_COLLECTION)
     .findOne({ phone: phoneNumber });
+  userDeatails.otp = OTP;
   if (userDeatails) {
     //send otp function
-    const code = await verification.sendOtp(phoneNumber);
+    const code = sms.sendOTP(phoneNumber, OTP);
+    // const code = await verification.sendOtp(phoneNumber);
     if (code) {
       req.session.userverify = true;
       req.session.otpLogin = userDeatails;
@@ -265,10 +281,12 @@ const VerifyPhone = asyncHandler(async (req, res) => {
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
       .findOne({ phone: phoneNumber });
+    wholesalerDeatails.otp = OTP;
     req.session.userverify = false;
     req.session.otpLogin = wholesalerDeatails;
     if (wholesalerDeatails) {
-      const code = await verification.sendOtp(phoneNumber);
+      sms.sendOTP(phoneNumber, OTP);
+      // const code = await verification.sendOtp(phoneNumber);
       res.status(200).json("OTP Sented Successfuly");
     } else {
       res.status(401).json("Invalid Phone Number");
@@ -284,8 +302,8 @@ const cheackOtp = asyncHandler(async (req, res) => {
   //otp check function
   if (userverify == true) {
     const user = true;
-    const code = await verification.CheckOtp(users.phone, Otp);
-    if (code.valid) {
+    // const code = await verification.CheckOtp(users.phone, Otp);
+    if (users.otp == Otp) {
       const userId = users.CUST_ID;
       let cartItems = await db
         .get()
@@ -343,8 +361,8 @@ const cheackOtp = asyncHandler(async (req, res) => {
       res.status(401).json("Invalid Otp Please verify Otp");
     }
   } else {
-    const code = await verification.CheckOtp(users.phone, Otp);
-    if (code.valid) {
+    // const code = await verification.CheckOtp(users.phone, Otp);
+    if (users.otp == Otp) {
       const userId = users.CUST_ID;
       let cartItems = await db
         .get()
@@ -425,7 +443,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
   if (!user) {
     const FromName = req.body.FromName;
     const FromLastName = req.body.FromLastName;
-    const FromPostcode = req.body.FromPostcode;
+    const FromPincode = req.body.FromPincode;
     const FromStreetAddress = req.body.FromStreetAddress;
     const FromTownCity = req.body.FromTownCity;
     const FromPhoneNumber = req.body.FromPhoneNumber;
@@ -434,7 +452,7 @@ const PaytmIntegration = asyncHandler(async (req, res) => {
     fromAddress = {
       FromName,
       FromLastName,
-      FromPostcode,
+      FromPincode,
       FromStreetAddress,
       FromTownCity,
       FromPhoneNumber,
@@ -1632,7 +1650,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
   if (!user) {
     const FromName = req.body.FromName;
     const FromLastName = req.body.FromLastName;
-    const FromPincode = req.body.FromPostcode;
+    const FromPincode = req.body.FromPincode;
     const FromStreetAddress = req.body?.FromStreetAddress;
     const FromTownCity = req.body.FromTownCity;
     const FromPhoneNumber = req.body.FromPhoneNumber;
@@ -1650,13 +1668,12 @@ const createOrderObjct = asyncHandler(async (req, res) => {
     };
   }
   const DeliveyCharge = req.body.DeliveyCharge;
-  const DeliveryType = req.body.DeliveryType;
   const payment_type = req.body.payment_type;
   var Role = "user";
   if (!user) {
     Role = "wholesaler";
     var Applywallet = req.body?.Applywallet;
-    if (Applywallet > 0 && Applywallet < Amount) {
+    if (Applywallet > 0) {
       Amount = Amount - Applywallet;
       req.session.Applywallet = Applywallet;
     }
@@ -1689,14 +1706,24 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         }
       );
   }
+
   if (!user) {
-    await db
+    const update = await db
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
       .updateOne(
         { CUST_ID: ID },
         {
           $set: { FromAddress: fromAddress },
+        }
+      );
+    await db
+      .get()
+      .collection(collection.WHOLESALER_COLLECTION)
+      .updateOne(
+        { CUST_ID: ID },
+        {
+          $set: { Address: address },
         }
       );
   }
@@ -1737,7 +1764,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       .collection(collection.PRODUCT_COLLECTION)
       .updateOne({ id: items.ProductID }, { $inc: { saleCount: 1 } });
   });
-  const date = new Date().toLocaleDateString();
+  const date = req.body.Date;
   //create order object
   if (Applywallet > 0) {
     const OrderObject = {
@@ -1751,7 +1778,6 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       user: user,
       role: Role,
       DeliveyCharge: DeliveyCharge,
-      DeliveryType: DeliveryType,
       Courier: Service,
       wallet: Applywallet,
       payment_type: payment_type,
@@ -1764,7 +1790,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       const OrderObject = {
         Id: OrderId,
         CUST_ID: ID,
-        Total: Amount,
+        Total: parseInt(Amount),
         Product: OderProducts,
         Address: address,
         Date: date,
@@ -1772,7 +1798,6 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         role: Role,
         DeliveyCharge: DeliveyCharge,
         Courier: Service,
-        DeliveryType: DeliveryType,
         status: "Pending",
         Payment: "Pending",
       };
@@ -1781,7 +1806,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       const OrderObject = {
         Id: OrderId,
         CUST_ID: ID,
-        Total: Amount,
+        Total: parseInt(Amount),
         Product: OderProducts,
         Address: address,
         FromAddress: fromAddress,
@@ -1790,38 +1815,27 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         role: Role,
         DeliveyCharge: DeliveyCharge,
         Courier: Service,
-        DeliveryType: DeliveryType,
         status: "Pending",
         Payment: "Pending",
       };
       req.session.orderProducts = OrderObject;
     }
   }
+
   // storing order object in session
   // req.session.orderProducts = OrderObject;
   //find quantity function
   const orderItems = req.session.orderProducts;
-  const uuid = uuidv4();
-  OderProducts.map(async (products) => {
-    const product = await db
-      .get()
-      .collection(collection.PRODUCT_COLLECTION)
-      .findOne({ id: products.ProductID });
-    product.variation.map((obj) => {
-      if (obj.color == products.color) {
-        obj.size.map(async (sizesObj) => {
-          if (sizesObj.name == products.size) {
-            if (sizesObj.stock != 0) {
-              res.status(200).json(orderItems);
-            } else {
-              res.status(500).json("Somthing Went Wrong");
-            }
-          }
-        });
-      }
-    });
-  });
+  var stock = true;
+
+  if (stock) {
+    res.status(200).json(orderItems);
+  } else {
+    console.log("fmcmmcc");
+    res.status(403).json("Product out stock");
+  }
 });
+
 const razorpayIntegration = asyncHandler(async (req, res) => {
   const orderObject = req.session.orderProducts;
   const amount = orderObject.Total;
@@ -1965,6 +1979,19 @@ const AddAmountToWallet = asyncHandler(async (req, res) => {
     res.status(500).json("Somthing Went wrong");
   }
 });
+
+//razorpay payment verification function
+const verificationPayment = asyncHandler(async (req, res) => {
+  const { razorpaySignature, razorpayOrderId, razorpayPaymentId } = req.body;
+  let hmac = crypto.createHmac("sha256", process.env.SECRET_ID);
+  hmac.update(razorpayOrderId + "|" + razorpayPaymentId);
+  hmac = hmac.digest("hex");
+  if (hmac == razorpaySignature) {
+    res.status(200).json("Payment Success");
+  } else {
+    res.status(500).json("Payment Failed");
+  }
+});
 module.exports = {
   addToCart,
   registerUser,
@@ -1994,4 +2021,5 @@ module.exports = {
   deleteuserCart,
   AddAmountToWalletRazorpay,
   AddAmountToWallet,
+  verificationPayment,
 };

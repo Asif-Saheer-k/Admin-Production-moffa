@@ -9,7 +9,7 @@ function verifyToken(req, res, next) {
   Jwt.verify(token, process.env.JWT_SECRET, (err, res) => {
     if (err) {
       console.log("Unautherized");
-      //  res.status(500).send("Authentication Failed")
+      res.status(500).json("Authentication Failed");
     } else {
       next();
     }

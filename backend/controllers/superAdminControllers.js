@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const generateToken = require("../utils/jwtToken");
+const sms = require("../middleware/sms");
 const collection = require("../config/collection");
 const objectId = require("mongodb").ObjectId;
 const verification = require("../middleware/tiwllioVerification");
@@ -10,6 +11,7 @@ const verification = require("../middleware/tiwllioVerification");
 const verifyAdmin = asyncHandler(async (req, res) => {
   const Email = req.body.email;
   const Password = req.body.password;
+  console.log(Email, Password, "fdsf,s");
   const superAdmin = true;
   if (Email == process.env.SUPER_ADMIN) {
     bcrypt.compare(Password, process.env.SUPER_ADMIN_PASSWORD).then((resp) => {
@@ -120,9 +122,7 @@ const viewAllUser = asyncHandler(async (req, res) => {
   if (AllUser) {
     res.status(200).json(AllUser);
   } else {
-    res.status(500).json({
-      errr: "somthing wrong....",
-    });
+    res.status(500).json("somthing wrong....");
   }
 });
 
@@ -666,12 +666,18 @@ const DeleteStock = asyncHandler(async (req, res) => {
 });
 //dispatch order function
 const DispatchOrder = asyncHandler(async (req, res) => {
+  console.log(req.body, "djjdjdhejdj");
   //dispatch ID
-  const DispatchId = req.body.DisPatchId;
+  const Link = req.body.link;
   //phone number
   const phone = req.body.phone;
   //order ID
   const ORDER_ID = req.body.OrderID;
+  //tracking id
+  const TrackingID = req.body.TrackingId;
+  //delivery provider
+  const DeleiveryProvider = req.body.Courier;
+  sms.sendDispatchSMS(phone, TrackingID, DeleiveryProvider, Link);
 
   //change order status function
   const ChangeOrderStatus = await db
@@ -719,9 +725,12 @@ const updatedWallet = asyncHandler(async (req, res) => {
   }
 });
 const ChangeOrderStatus = asyncHandler(async (req, res) => {
-  console.log(req.body);
   const newstatus = req.body.status;
   const order_id = req.body.orderId;
+  const deatails = await db
+    .get()
+    .collection(collection.ORDER_COLLECTION)
+    .findOne({});
   const change = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
@@ -733,7 +742,6 @@ const ChangeOrderStatus = asyncHandler(async (req, res) => {
         },
       }
     );
-  console.log(change);
   if (change) {
     res.status(200).json("Success");
   } else {

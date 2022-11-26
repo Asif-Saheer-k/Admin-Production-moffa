@@ -43,7 +43,7 @@ const {
 //super Admin login function
 router.route("/login").post(verifyAdmin);
 //view all users
-router.route("/viewAlluser").get(verifyToken, viewAllUser);
+router.route("/viewAlluser").get(verifyToken,viewAllUser);
 //deleter user routes
 router.route("/delete-user/:id").post(verifyToken, deleteuser);
 //make wholesaler wholesalers
