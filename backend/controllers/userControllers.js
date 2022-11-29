@@ -22,7 +22,6 @@ const razorpay = new Razorpay({
 const registerUser = asyncHandler(async (req, res) => {
   req.session.userDeatails = req.body;
   const OTP = Math.random().toFixed(6).split(".")[1];
-  console.log(OTP);
   req.session.userDeatails.otp = OTP;
   const phoneNumber = req.session.userDeatails.phone;
   // Phone number cheacking in database
@@ -30,7 +29,6 @@ const registerUser = asyncHandler(async (req, res) => {
     .get()
     .collection(collection.USER_COLLECTION)
     .findOne({ phone: phoneNumber });
-
   if (checkPhone) {
     res.status(401).json("Phone Number Already Exists");
   } else {
@@ -42,8 +40,7 @@ const registerUser = asyncHandler(async (req, res) => {
       res.status(401).json("Phone Number Already Exists");
     } else {
       // OTP sented function
-      sms.sendOTP(phoneNumber, OTP);
-      const code = await verification.sendOtp(req.session.userDeatails.phone);
+      const code = sms.sendOTP(phoneNumber, OTP);
       if (code) {
         res.status(200).json("OTP Sented Successfully");
       } else {
@@ -58,7 +55,7 @@ const ResetOtpSend = asyncHandler(async (req, res) => {
   if (req.session.userDeatails) {
     const phoneNumber = req.session.userDeatails.phone;
     const OTP = req.session.userDeatails.otp;
-    sms.sendOTP(phoneNumber, OTP);
+    const code = sms.sendOTP(phoneNumber, OTP);
     // const code = await verification.sendOtp(req.session.userDeatails.phone);
     if (code) {
       res.status(200).json("OTP Sented Successfully");
@@ -93,7 +90,6 @@ const Phoneverification = asyncHandler(async (req, res) => {
     const phoneNumber = req.session.userDeatails.phone;
     const OTP = req.session.userDeatails.otp;
     userData.password = await bcrypt.hash(userData.password, 10);
-    // const code = await verification.CheckOtp(phoneNumber, Otp);
     // check valid true or false
     if (eneterOtp == OTP) {
       const User = await db
@@ -264,8 +260,9 @@ const VerifyPhone = asyncHandler(async (req, res) => {
     .get()
     .collection(collection.USER_COLLECTION)
     .findOne({ phone: phoneNumber });
-  userDeatails.otp = OTP;
+
   if (userDeatails) {
+    userDeatails["otp"] = OTP;
     //send otp function
     const code = sms.sendOTP(phoneNumber, OTP);
     // const code = await verification.sendOtp(phoneNumber);
@@ -281,10 +278,11 @@ const VerifyPhone = asyncHandler(async (req, res) => {
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
       .findOne({ phone: phoneNumber });
-    wholesalerDeatails.otp = OTP;
-    req.session.userverify = false;
-    req.session.otpLogin = wholesalerDeatails;
+
     if (wholesalerDeatails) {
+      wholesalerDeatails.otp = OTP;
+      req.session.userverify = false;
+      req.session.otpLogin = wholesalerDeatails;
       sms.sendOTP(phoneNumber, OTP);
       // const code = await verification.sendOtp(phoneNumber);
       res.status(200).json("OTP Sented Successfuly");
@@ -1740,20 +1738,36 @@ const createOrderObjct = asyncHandler(async (req, res) => {
     .limit(1)
     .toArray();
   let OrderId;
+  let InvoceNO;
+
   if (OrdersId[0]?.Id) {
     OrderId = OrdersId[0].Id + 1;
+    InvoceNO = parseInt(OrdersId[0].InvoceNO) + 1;
   } else {
     OrderId = 130001;
+    InvoceNO = 100;
   }
   //oder producting deatails storing array
   const OderProducts = [];
   //oder product deatails
   OrderProductDeatails.map(async (Product) => {
+    const Deal = Product.Deal;
+    const date = req.body.Date;
+    let discount = Product.discount;
+    const TodayDeal = Deal.filter((item) => {
+      if (item.date == date) {
+        discount = item.offer;
+      }
+    });
+
     const obj = {
       ProductID: Product.id,
       quantity: Product.quantity,
       color: Product.selectedProductColor,
       size: Product.selectedProductSize,
+      Price: Product.price,
+      dicount: discount,
+      wholeSalerPrice: Product.wholesaler,
     };
     OderProducts.push(obj);
   });
@@ -1921,6 +1935,7 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
     .collection(collection.ORDER_COLLECTION)
     .insertOne(order);
   if (success) {
+    sms.sendOrderPlacedSMS(order.Id, order.Address.PhoneNumber);
     req.session.orderProducts = null;
     req.session.Applywallet = null;
     res.status(200).json("Success");
@@ -1992,6 +2007,7 @@ const verificationPayment = asyncHandler(async (req, res) => {
     res.status(500).json("Payment Failed");
   }
 });
+
 module.exports = {
   addToCart,
   registerUser,

@@ -666,7 +666,7 @@ const DeleteStock = asyncHandler(async (req, res) => {
 });
 //dispatch order function
 const DispatchOrder = asyncHandler(async (req, res) => {
-  console.log(req.body, "djjdjdhejdj");
+  console.log(req.body,"dkck");
   //dispatch ID
   const Link = req.body.link;
   //phone number
@@ -677,7 +677,7 @@ const DispatchOrder = asyncHandler(async (req, res) => {
   const TrackingID = req.body.TrackingId;
   //delivery provider
   const DeleiveryProvider = req.body.Courier;
-  sms.sendDispatchSMS(phone, TrackingID, DeleiveryProvider, Link);
+  sms.sendDispatchSMS(phone,ORDER_ID,TrackingID,Link,DeleiveryProvider);
 
   //change order status function
   const ChangeOrderStatus = await db
@@ -748,6 +748,22 @@ const ChangeOrderStatus = asyncHandler(async (req, res) => {
     res.status(500).json("Somthing went wrong");
   }
 });
+//view yesterday all orders
+const yesterdayOrders = asyncHandler(async (req, res) => {
+  const yesterday = req.body.Yesterday;
+  console.log(yesterday, "nhh");
+  const date = await db
+    .get()
+    .collection(collection.ORDER_COLLECTION)
+    .find({ Date: yesterday })
+    .toArray();
+  console.log(date);
+  if (date) {
+    res.status(200).json(date);
+  } else {
+    res.status(200).json("NO RECORDS");
+  }
+});
 
 module.exports = {
   verifyAdmin,
@@ -785,4 +801,5 @@ module.exports = {
   viewALLDispatchOrders,
   updatedWallet,
   ChangeOrderStatus,
+  yesterdayOrders,
 };
