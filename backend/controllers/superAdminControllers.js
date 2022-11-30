@@ -263,13 +263,11 @@ const addProducts = asyncHandler(async (req, res) => {
     .toArray();
 
   if (ProductId[0]?.id) {
-    const PR = ProductId[0].id.slice(6);
-
+    const PR = ProductId[0].id.slice(2);
     const inc = parseInt(PR) + 1;
-
-    product.id = "PRO_ID" + inc;
+    product.id = "P-" + inc;
   } else {
-    product.id = "PRO_ID100000";
+    product.id = "P-100";
   }
   product.Deal = [];
   product.hidden = false;
@@ -666,7 +664,7 @@ const DeleteStock = asyncHandler(async (req, res) => {
 });
 //dispatch order function
 const DispatchOrder = asyncHandler(async (req, res) => {
-  console.log(req.body,"dkck");
+  console.log(req.body, "dkck");
   //dispatch ID
   const Link = req.body.link;
   //phone number
@@ -677,7 +675,7 @@ const DispatchOrder = asyncHandler(async (req, res) => {
   const TrackingID = req.body.TrackingId;
   //delivery provider
   const DeleiveryProvider = req.body.Courier;
-  sms.sendDispatchSMS(phone,ORDER_ID,TrackingID,Link,DeleiveryProvider);
+  sms.sendDispatchSMS(phone, ORDER_ID, TrackingID, Link, DeleiveryProvider);
 
   //change order status function
   const ChangeOrderStatus = await db
@@ -751,7 +749,6 @@ const ChangeOrderStatus = asyncHandler(async (req, res) => {
 //view yesterday all orders
 const yesterdayOrders = asyncHandler(async (req, res) => {
   const yesterday = req.body.Yesterday;
-  console.log(yesterday, "nhh");
   const date = await db
     .get()
     .collection(collection.ORDER_COLLECTION)

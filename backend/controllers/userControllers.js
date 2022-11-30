@@ -1769,8 +1769,10 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       dicount: discount,
       wholeSalerPrice: Product.wholesaler,
     };
+    console.log(obj,"Dckck");
     OderProducts.push(obj);
   });
+
   //increasing sales count
   OderProducts.map(async (items) => {
     await db
@@ -1797,6 +1799,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       payment_type: payment_type,
       status: "Pending",
       Payment: "Pending",
+      InvoceNO:InvoceNO
     };
     req.session.orderProducts = OrderObject;
   } else {
@@ -1814,6 +1817,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         Courier: Service,
         status: "Pending",
         Payment: "Pending",
+        InvoceNO:InvoceNO
       };
       req.session.orderProducts = OrderObject;
     } else {
@@ -1831,6 +1835,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         Courier: Service,
         status: "Pending",
         Payment: "Pending",
+        InvoceNO:InvoceNO
       };
       req.session.orderProducts = OrderObject;
     }
@@ -1845,7 +1850,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
   if (stock) {
     res.status(200).json(orderItems);
   } else {
-    console.log("fmcmmcc");
+
     res.status(403).json("Product out stock");
   }
 });
