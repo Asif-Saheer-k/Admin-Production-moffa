@@ -42,7 +42,7 @@ const registerUser = asyncHandler(async (req, res) => {
       // OTP sented function
       const code = sms.sendOTP(phoneNumber, OTP);
       if (code) {
-        res.status(200).json("OTP Sented Successfully");
+        res.status(200).json("OTP Sent Successfully");
       } else {
         res.status(401).json("Invalid Phone number");
       }
@@ -58,7 +58,7 @@ const ResetOtpSend = asyncHandler(async (req, res) => {
     const code = sms.sendOTP(phoneNumber, OTP);
     // const code = await verification.sendOtp(req.session.userDeatails.phone);
     if (code) {
-      res.status(200).json("OTP Sented Successfully");
+      res.status(200).json("OTP Sent Successfully");
     } else {
       res.status(401).json("Invalid Phone number");
     }
@@ -269,7 +269,7 @@ const VerifyPhone = asyncHandler(async (req, res) => {
     if (code) {
       req.session.userverify = true;
       req.session.otpLogin = userDeatails;
-      res.status(200).json("OTP Sented Successfuly");
+      res.status(200).json("OTP Sent Successfuly");
     } else {
       res.status(500).json("Somthing Went Wrong");
     }
@@ -285,7 +285,7 @@ const VerifyPhone = asyncHandler(async (req, res) => {
       req.session.otpLogin = wholesalerDeatails;
       sms.sendOTP(phoneNumber, OTP);
       // const code = await verification.sendOtp(phoneNumber);
-      res.status(200).json("OTP Sented Successfuly");
+      res.status(200).json("OTP Sent Successfuly");
     } else {
       res.status(401).json("Invalid Phone Number");
     }
@@ -1742,10 +1742,12 @@ const createOrderObjct = asyncHandler(async (req, res) => {
 
   if (OrdersId[0]?.Id) {
     OrderId = OrdersId[0].Id + 1;
-    InvoceNO = parseInt(OrdersId[0].InvoceNO) + 1;
+    const PR = OrdersId[0].InvoceNO.slice(5);
+    const inc = parseInt(PR) + 1;
+    InvoceNO = "MFA00" + inc;
   } else {
     OrderId = 130001;
-    InvoceNO = 100;
+    InvoceNO = "MFA" + 001;
   }
   //oder producting deatails storing array
   const OderProducts = [];
@@ -1769,7 +1771,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       dicount: discount,
       wholeSalerPrice: Product.wholesaler,
     };
-    console.log(obj,"Dckck");
+    console.log(obj, "Dckck");
     OderProducts.push(obj);
   });
 
@@ -1799,7 +1801,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       payment_type: payment_type,
       status: "Pending",
       Payment: "Pending",
-      InvoceNO:InvoceNO
+      InvoceNO: InvoceNO,
     };
     req.session.orderProducts = OrderObject;
   } else {
@@ -1817,7 +1819,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         Courier: Service,
         status: "Pending",
         Payment: "Pending",
-        InvoceNO:InvoceNO
+        InvoceNO: InvoceNO,
       };
       req.session.orderProducts = OrderObject;
     } else {
@@ -1835,7 +1837,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         Courier: Service,
         status: "Pending",
         Payment: "Pending",
-        InvoceNO:InvoceNO
+        InvoceNO: InvoceNO,
       };
       req.session.orderProducts = OrderObject;
     }
@@ -1850,7 +1852,6 @@ const createOrderObjct = asyncHandler(async (req, res) => {
   if (stock) {
     res.status(200).json(orderItems);
   } else {
-
     res.status(403).json("Product out stock");
   }
 });

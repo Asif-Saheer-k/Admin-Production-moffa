@@ -11,7 +11,6 @@ const verification = require("../middleware/tiwllioVerification");
 const verifyAdmin = asyncHandler(async (req, res) => {
   const Email = req.body.email;
   const Password = req.body.password;
-  console.log(Email, Password, "fdsf,s");
   const superAdmin = true;
   if (Email == process.env.SUPER_ADMIN) {
     bcrypt.compare(Password, process.env.SUPER_ADMIN_PASSWORD).then((resp) => {
@@ -664,7 +663,6 @@ const DeleteStock = asyncHandler(async (req, res) => {
 });
 //dispatch order function
 const DispatchOrder = asyncHandler(async (req, res) => {
-  console.log(req.body, "dkck");
   //dispatch ID
   const Link = req.body.link;
   //phone number
@@ -754,7 +752,6 @@ const yesterdayOrders = asyncHandler(async (req, res) => {
     .collection(collection.ORDER_COLLECTION)
     .find({ Date: yesterday })
     .toArray();
-  console.log(date);
   if (date) {
     res.status(200).json(date);
   } else {

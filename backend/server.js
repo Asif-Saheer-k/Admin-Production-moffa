@@ -7,7 +7,6 @@ const userRoutes = require("./routes/userRoutes");
 const superAdmin = require("./routes/superAdminRoutes");
 const path = require("path");
 const { notFound, errorHandler } = require("./errormiddleware/errorMidlleware");
-
 const app = express();
 dotenv.config();
 app.use(express.json());
