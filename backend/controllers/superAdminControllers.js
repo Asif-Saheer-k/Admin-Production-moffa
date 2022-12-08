@@ -326,6 +326,7 @@ const makeWholesaler = asyncHandler(async (req, res) => {
     .get()
     .collection(collection.USER_COLLECTION)
     .findOne({ _id: objectId(userId) });
+
   user.wallet = 0;
   if (user) {
     const wholesaler = await db
@@ -333,7 +334,6 @@ const makeWholesaler = asyncHandler(async (req, res) => {
       .collection(collection.WHOLESALER_COLLECTION)
       .insertOne(user);
     res.status(200).json("New Wholesaler Added");
-
     if (wholesaler) {
       await db
         .get()

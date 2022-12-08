@@ -70,35 +70,37 @@ const ResetOtpSend = asyncHandler(async (req, res) => {
 // Otp verification function
 const Phoneverification = asyncHandler(async (req, res) => {
   const phoneNumber = req.session.userDeatails.phone;
+  const number = phoneNumber.toString();
+  const uniqueID = number.slice(0, 9);
+  let ID = parseInt(uniqueID);
   let UserId = await db
     .get()
     .collection(collection.USER_COLLECTION)
-    .find()
-    .sort({ _id: -1 })
-    .limit(1)
-    .toArray();
-  let ID = phoneNumber;
-  if (req.session.userDeatails) {
-    const eneterOtp = req.params.otp;
-    const userData = req.session.userDeatails;
-    userData.CUST_ID = ID;
-
-    const phoneNumber = req.session.userDeatails.phone;
-    const OTP = req.session.userDeatails.otp;
-    userData.password = await bcrypt.hash(userData.password, 10);
-    // check valid true or false
-    if (eneterOtp == OTP) {
-      const User = await db
-        .get()
-        .collection(collection.USER_COLLECTION)
-        .insertOne(userData);
-      if (User) {
-        res.status(200).json("successfuly reagisted");
+    .findOne({ CUST_ID: ID });
+  if (!UserId) {
+    if (req.session.userDeatails) {
+      const eneterOtp = req.params.otp;
+      const userData = req.session.userDeatails;
+      userData.CUST_ID = ID;
+      const phoneNumber = req.session.userDeatails.phone;
+      const OTP = req.session.userDeatails.otp;
+      userData.password = await bcrypt.hash(userData.password, 10);
+      // check valid true or false
+      if (eneterOtp == OTP) {
+        const User = await db
+          .get()
+          .collection(collection.USER_COLLECTION)
+          .insertOne(userData);
+        if (User) {
+          res.status(200).json("successfuly reagisted");
+        } else {
+          res.status(500).json("Somthing went wrong");
+        }
       } else {
-        res.status(500).json("Somthing went wrong");
+        res.status(401).json("Please Verify OTP");
       }
     } else {
-      res.status(401).json("Please Verify OTP");
+      res.status(500).json("Somthing went wrong");
     }
   } else {
     res.status(500).json("Somthing went wrong");
@@ -251,7 +253,9 @@ const loginUser = asyncHandler(async (req, res) => {
 //otp login verify phone number function
 const VerifyPhone = asyncHandler(async (req, res) => {
   const phoneNumber = req.body.phone;
+
   const OTP = Math.random().toFixed(6).split(".")[1];
+
   const userDeatails = await db
     .get()
     .collection(collection.USER_COLLECTION)
@@ -260,6 +264,7 @@ const VerifyPhone = asyncHandler(async (req, res) => {
   if (userDeatails) {
     userDeatails["otp"] = OTP;
     //send otp function
+
     const code = sms.sendOTP(phoneNumber, OTP);
     // const code = await verification.sendOtp(phoneNumber);
     if (code) {
@@ -1462,7 +1467,6 @@ const DeleteuserAddress = asyncHandler(async (req, res) => {
 
 const getMyOrders = asyncHandler(async (req, res) => {
   const UserID = req.params.id;
-
   const Myorders = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
@@ -1767,7 +1771,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       dicount: discount,
       wholeSalerPrice: Product.wholesaler,
     };
-    console.log(obj, "Dckck");
+
     OderProducts.push(obj);
   });
 
