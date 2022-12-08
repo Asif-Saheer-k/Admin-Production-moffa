@@ -750,8 +750,9 @@ const yesterdayOrders = asyncHandler(async (req, res) => {
   const date = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
-    .find({ Date: yesterday })
+    .find({ Date:yesterday})
     .toArray();
+    
   if (date) {
     res.status(200).json(date);
   } else {
