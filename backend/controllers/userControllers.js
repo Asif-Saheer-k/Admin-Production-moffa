@@ -69,6 +69,7 @@ const ResetOtpSend = asyncHandler(async (req, res) => {
 
 // Otp verification function
 const Phoneverification = asyncHandler(async (req, res) => {
+  const phoneNumber = req.session.userDeatails.phone;
   let UserId = await db
     .get()
     .collection(collection.USER_COLLECTION)
@@ -76,12 +77,7 @@ const Phoneverification = asyncHandler(async (req, res) => {
     .sort({ _id: -1 })
     .limit(1)
     .toArray();
-  let ID;
-  if (UserId[0]) {
-    ID = UserId[0]?.CUST_ID + 1;
-  } else {
-    ID = 10000000;
-  }
+  let ID = phoneNumber;
   if (req.session.userDeatails) {
     const eneterOtp = req.params.otp;
     const userData = req.session.userDeatails;
