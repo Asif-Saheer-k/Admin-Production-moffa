@@ -12,6 +12,7 @@ const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
 const https = require("https");
 const Razorpay = require("razorpay");
+const res = require("express/lib/response");
 
 const razorpay = new Razorpay({
   key_id: process.env.SECRET_KEY,
@@ -2013,6 +2014,28 @@ const verificationPayment = asyncHandler(async (req, res) => {
     res.status(500).json("Payment Failed");
   }
 });
+const CheckUserId = asyncHandler(async (req, res) => {
+  const userid = req.body.userid;
+
+  const user = await db
+    .get()
+    .collection(collection.USER_COLLECTION)
+    .findOne({ CUST_ID: parseInt(userid) });
+
+  if (user) {
+    res.status(200).json("success");
+  } else {
+    const wholeSaler = await db
+      .get()
+      .collection(collection.WHOLESALER_COLLECTION)
+      .findOne({ CUST_ID: parseInt(userid) });
+    if (wholeSaler) {
+      res.status(200).json("success");
+    } else {
+      res.status(200).json("failed");
+    }
+  }
+});
 
 module.exports = {
   addToCart,
@@ -2044,4 +2067,5 @@ module.exports = {
   AddAmountToWalletRazorpay,
   AddAmountToWallet,
   verificationPayment,
+  CheckUserId,
 };

@@ -37,7 +37,8 @@ const {
   deleteuserCart,
   AddAmountToWalletRazorpay,
   AddAmountToWallet,
-  verificationPayment
+  verificationPayment,
+  CheckUserId
 } = require("../controllers/userControllers");
 const { verifyToken } = require("../middleware/tokenVerification");
 //login routes using email,pssword
@@ -102,6 +103,7 @@ router.route('/add-amount-razorpay').post(verifyToken,AddAmountToWalletRazorpay)
 router.route('/add-amount-to-wallet').post(AddAmountToWallet)
 //payment verification routes
 router.route('/verify-razorpay-payment').post(verificationPayment)
+router.route("/check-user-id").post(CheckUserId)
 
 
 module.exports = router;
