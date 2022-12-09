@@ -12,7 +12,6 @@ const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
 const https = require("https");
 const Razorpay = require("razorpay");
-const res = require("express/lib/response");
 
 const razorpay = new Razorpay({
   key_id: process.env.SECRET_KEY,
@@ -23,6 +22,7 @@ const razorpay = new Razorpay({
 const registerUser = asyncHandler(async (req, res) => {
   req.session.userDeatails = req.body;
   const OTP = Math.random().toFixed(6).split(".")[1];
+  
   req.session.userDeatails.otp = OTP;
   const phoneNumber = req.session.userDeatails.phone;
   // Phone number cheacking in database
@@ -254,9 +254,7 @@ const loginUser = asyncHandler(async (req, res) => {
 //otp login verify phone number function
 const VerifyPhone = asyncHandler(async (req, res) => {
   const phoneNumber = req.body.phone;
-
   const OTP = Math.random().toFixed(6).split(".")[1];
-
   const userDeatails = await db
     .get()
     .collection(collection.USER_COLLECTION)
