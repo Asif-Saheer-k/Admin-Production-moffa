@@ -18,7 +18,7 @@ module.exports = {
         .then((data) => {
           resolve(data);
         }).catch((err) => {
-          console.log(err); 
+         
     });
   })
   },
@@ -37,7 +37,7 @@ module.exports = {
           resolve(data);
         })
         .catch((err) => {
-         console.log(err);
+        
         });
     });
   },
@@ -55,7 +55,7 @@ module.exports = {
           resolve(message);
         })
         .catch((err) => {  
-         console.log(err);
+       
         });
     });
   },

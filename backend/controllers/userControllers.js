@@ -22,7 +22,7 @@ const razorpay = new Razorpay({
 const registerUser = asyncHandler(async (req, res) => {
   req.session.userDeatails = req.body;
   const OTP = Math.random().toFixed(6).split(".")[1];
-  
+
   req.session.userDeatails.otp = OTP;
   const phoneNumber = req.session.userDeatails.phone;
   // Phone number cheacking in database
@@ -255,6 +255,7 @@ const loginUser = asyncHandler(async (req, res) => {
 const VerifyPhone = asyncHandler(async (req, res) => {
   const phoneNumber = req.body.phone;
   const OTP = Math.random().toFixed(6).split(".")[1];
+  console.log(OTP);
   const userDeatails = await db
     .get()
     .collection(collection.USER_COLLECTION)
@@ -1639,7 +1640,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
   const Apartment = req.body?.Apartment;
   const TownCity = req.body.TownCity;
   const PhoneNumber = req.body.PhoneNumber;
-  const Email = req.body.Email;
+  const Email = req.body?.Email;
   const message = req.body?.message;
   const State = req.body.State;
   const user = req.body.user;
@@ -1651,7 +1652,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
     const FromStreetAddress = req.body?.FromStreetAddress;
     const FromTownCity = req.body.FromTownCity;
     const FromPhoneNumber = req.body.FromPhoneNumber;
-    const FromEmail = req.body.FromEmail;
+    const FromEmail = req.body?.FromEmail;
     const FromState = req.body.FromState;
     fromAddress = {
       FromName,
@@ -1935,12 +1936,50 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
       }
     });
   });
+
+  let smsphone;
+  if (order.user) {
+    const Take = await db
+      .get()
+      .collection(collection.USER_COLLECTION)
+      .findOne({ CUST_ID: parseInt(order.CUST_ID) });
+    smsphone = Take.phone;
+  } else {
+    const Take = await db
+      .get()
+      .collection(collection.WHOLESALER_COLLECTION)
+      .findOne({ CUST_ID: parseInt(order.CUST_ID) });
+    smsphone = Take.phone;
+  }
+  let OrdersId = await db
+    .get()
+    .collection(collection.ORDER_COLLECTION)
+    .find()
+    .sort({ _id: -1 })
+    .limit(1)
+    .toArray();
+  let OrderId;
+  let InvoceNO;
+  if (OrdersId[0]?.Id) {
+    OrderId = OrdersId[0].Id + 1;
+    const PR = OrdersId[0].InvoceNO.slice(5);
+    const inc = parseInt(PR) + 1;
+    InvoceNO = "MFA00" + inc;
+  } else {
+    OrderId = 130001;
+    InvoceNO = "MFA" + 001;
+  }
+  order["Id"] = OrderId;
+  order["InvoceNO"] = InvoceNO;
+  order["smsphone"] = smsphone;
   const success = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
     .insertOne(order);
   if (success) {
-    sms.sendOrderPlacedSMS(order.Id, order.Address.PhoneNumber);
+    if (smsphone) {
+      sms.sendOrderPlacedSMS(OrderId,smsphone);
+    }
     req.session.orderProducts = null;
     req.session.Applywallet = null;
     res.status(200).json("Success");
@@ -2021,20 +2060,19 @@ const CheckUserId = asyncHandler(async (req, res) => {
     .findOne({ CUST_ID: parseInt(userid) });
 
   if (user) {
-    res.status(200).json("success");
+    res.status(200).json(user);
   } else {
     const wholeSaler = await db
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
       .findOne({ CUST_ID: parseInt(userid) });
     if (wholeSaler) {
-      res.status(200).json("success");
+      res.status(200).json(wholeSaler);
     } else {
       res.status(200).json("failed");
     }
   }
 });
-
 module.exports = {
   addToCart,
   registerUser,
