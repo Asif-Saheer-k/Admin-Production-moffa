@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const generateToken = require("../utils/jwtToken");
+const EmailSending = require("../middleware/emailVerification");
 const sms = require("../middleware/sms");
 const collection = require("../config/collection");
 const objectId = require("mongodb").ObjectId;
@@ -580,9 +581,9 @@ const ViewBottomBanner = asyncHandler(async (req, res) => {
     .collection(collection.BOTTOM_BANNER)
     .find()
     .sort({ _id: 1 })
-    .toArray();   
+    .toArray();
   if (BottomBanner) {
-    res.status(200).json(BottomBanner);   
+    res.status(200).json(BottomBanner);
   } else {
     res.status(500).json("Somthig Went Wrong");
   }
@@ -674,8 +675,12 @@ const DispatchOrder = asyncHandler(async (req, res) => {
   const TrackingID = req.body.TrackingId;
   //delivery provider
   const DeleiveryProvider = req.body.Courier;
+  //email sendign
+  const Email = req.body?.email;
+  if (Email) {
+    EmailSending.sendDispatchMail(Email, TrackingID, DeleiveryProvider, Link);
+  }
   sms.sendDispatchSMS(phone, ORDER_ID, TrackingID, Link, DeleiveryProvider);
-
   //change order status function
   const ChangeOrderStatus = await db
     .get()

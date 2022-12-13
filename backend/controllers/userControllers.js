@@ -3,6 +3,7 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const generateToken = require("../utils/jwtToken");
 const sms = require("../middleware/sms");
+const email = require("../middleware/emailVerification");
 const collection = require("../config/collection");
 const Paytm = require("paytmchecksum");
 const verification = require("../middleware/tiwllioVerification");
@@ -263,10 +264,12 @@ const VerifyPhone = asyncHandler(async (req, res) => {
 
   if (userDeatails) {
     userDeatails["otp"] = OTP;
-    //send otp function
-
+    // email otption hidded
+    if (userDeatails.email) {
+      email.sendMailOTP(userDeatails.email, OTP);
+    }
     const code = sms.sendOTP(phoneNumber, OTP);
-    // const code = await verification.sendOtp(phoneNumber);
+
     if (code) {
       req.session.userverify = true;
       req.session.otpLogin = userDeatails;
@@ -1859,11 +1862,12 @@ const createOrderObjct = asyncHandler(async (req, res) => {
 const razorpayIntegration = asyncHandler(async (req, res) => {
   const orderObject = req.session.orderProducts;
   const amount = orderObject.Total;
+  const userId = orderObject.CUST_ID;
   try {
     const options = {
       amount: amount * 100, // amount in smallest currency unit
       currency: "INR",
-      receipt: "receipt_order_74394",
+      receipt: `receipt_order_${userId}`,
     };
     const order = await razorpay.orders.create(options);
     if (!order) return res.status(500).send("Some error occured");
@@ -1872,9 +1876,27 @@ const razorpayIntegration = asyncHandler(async (req, res) => {
     res.status(500).send(error);
   }
 });
+
+//razorpay payment verification function
+const verificationPayment = asyncHandler(async (req, res) => {
+  const { razorpaySignature, razorpayOrderId, razorpayPaymentId } = req.body;
+  let hmac = crypto.createHmac("sha256", process.env.SECRET_ID);
+  hmac.update(razorpayOrderId + "|" + razorpayPaymentId);
+  hmac = hmac.digest("hex");
+  const order = req.session.orderProducts;
+  order["razorpayPaymentId"] = razorpayPaymentId;
+  req.session.orderProducts = order;
+  if (hmac == razorpaySignature) {
+    res.status(200).json("Payment Success");
+  } else {
+    res.status(500).json("Payment Failed");
+  }
+});
+
 const rezorpayOrder = asyncHandler(async (req, res) => {
   const ID = req.session.orderProducts.CUST_ID;
   const User = req.session.orderProducts.user;
+  const order = req.session.orderProducts;
   let Applywallet = req.session?.Applywallet;
   if (!User && Applywallet > 0) {
     const Apply = await db
@@ -1884,11 +1906,9 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
   }
   req.session.orderProducts.status = "Pending";
   req.session.orderProducts.Payment = "Success";
-  const order = req.session.orderProducts;
   order.status = "Pending";
   order.Payment = "Success";
   order.dateIso = new Date();
-
   order.Product.map(async (products) => {
     const product = await db
       .get()
@@ -1938,18 +1958,24 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
   });
 
   let smsphone;
+  let sendEmail;
+  let name;
   if (order.user) {
     const Take = await db
       .get()
       .collection(collection.USER_COLLECTION)
       .findOne({ CUST_ID: parseInt(order.CUST_ID) });
     smsphone = Take.phone;
+    sendEmail = Take?.email;
+    name = Take.name;
   } else {
     const Take = await db
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
       .findOne({ CUST_ID: parseInt(order.CUST_ID) });
     smsphone = Take.phone;
+    sendEmail = Take?.email;
+    name = Take.name;
   }
   let OrdersId = await db
     .get()
@@ -1972,13 +1998,18 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
   order["Id"] = OrderId;
   order["InvoceNO"] = InvoceNO;
   order["smsphone"] = smsphone;
+  order["userEmail"] = sendEmail;
+  order["orderName"] = name;
   const success = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
     .insertOne(order);
   if (success) {
     if (smsphone) {
-      sms.sendOrderPlacedSMS(OrderId,smsphone);
+      sms.sendOrderPlacedSMS(OrderId, smsphone);
+    }
+    if (sendEmail) {
+      email.sendOrderPlacedMail(sendEmail);
     }
     req.session.orderProducts = null;
     req.session.Applywallet = null;
@@ -2022,7 +2053,6 @@ const AddAmountToWalletRazorpay = asyncHandler(async (req, res) => {
 const AddAmountToWallet = asyncHandler(async (req, res) => {
   const ID = req.body.id;
   const amount = req.body.Amount;
-
   const updatewallet = await db
     .get()
     .collection(collection.WHOLESALER_COLLECTION)
@@ -2039,18 +2069,6 @@ const AddAmountToWallet = asyncHandler(async (req, res) => {
   }
 });
 
-//razorpay payment verification function
-const verificationPayment = asyncHandler(async (req, res) => {
-  const { razorpaySignature, razorpayOrderId, razorpayPaymentId } = req.body;
-  let hmac = crypto.createHmac("sha256", process.env.SECRET_ID);
-  hmac.update(razorpayOrderId + "|" + razorpayPaymentId);
-  hmac = hmac.digest("hex");
-  if (hmac == razorpaySignature) {
-    res.status(200).json("Payment Success");
-  } else {
-    res.status(500).json("Payment Failed");
-  }
-});
 const CheckUserId = asyncHandler(async (req, res) => {
   const userid = req.body.userid;
 
