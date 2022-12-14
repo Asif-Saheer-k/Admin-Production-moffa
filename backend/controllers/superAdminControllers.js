@@ -716,18 +716,21 @@ const updatedWallet = asyncHandler(async (req, res) => {
     .collection(collection.WHOLESALER_COLLECTION)
     .findOne({ _id: objectId(ID) });
   const todaydate = new Date();
+  var currentOffset = todaydate.getTimezoneOffset();
+  var ISTOffset = 330; // IST offset UTC +5:30
+  var ISTTime = new Date(
+    todaydate.getTime() + (ISTOffset + currentOffset) * 60000
+  );
+  var hoursIST = ISTTime.getHours();
+  var minutesIST = ISTTime.getMinutes();
+  const secondIST = ISTTime.getSeconds();
   const today =
-    todaydate.getDate() +
+    ISTTime.getDate() +
     "/" +
-    (todaydate.getMonth() + 1) +
+    (ISTTime.getMonth() + 1) +
     "/" +
-    todaydate.getFullYear();
-  const current_time =
-    todaydate.getHours() +
-    ":" +
-    todaydate.getMinutes() +
-    ":" +
-    todaydate.getSeconds();
+    ISTTime.getFullYear();
+  const current_time = hoursIST + ":" + minutesIST + ":" + secondIST;
   const walletinfo = {
     CUST_ID: Wholesaler.CUST_ID,
     Amount: amount,
@@ -800,7 +803,6 @@ const ViewAllInformation = asyncHandler(async (req, res) => {
     .find()
     .sort({ _id: -1 })
     .toArray();
-  console.log(walletInfo);
   if (walletInfo) {
     res.status(200).json(walletInfo);
   } else {

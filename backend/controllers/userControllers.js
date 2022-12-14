@@ -1788,6 +1788,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       .updateOne({ id: items.ProductID }, { $inc: { saleCount: 1 } });
   });
   const date = req.body.Date;
+  const Time=req.body?.Time
   //create order object
   if (Applywallet > 0) {
     const OrderObject = {
@@ -1798,6 +1799,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       Address: address,
       FromAddress: fromAddress,
       Date: date,
+      Time:Time,
       user: user,
       role: Role,
       DeliveyCharge: DeliveyCharge,
@@ -1819,6 +1821,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         Address: address,
         Date: date,
         user: user,
+        Time:Time,
         role: Role,
         DeliveyCharge: DeliveyCharge,
         Courier: Service,
@@ -1837,6 +1840,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         FromAddress: fromAddress,
         Date: date,
         user: user,
+        Time:Time,
         role: Role,
         DeliveyCharge: DeliveyCharge,
         Courier: Service,
@@ -1899,19 +1903,21 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
   let Applywallet = req.session?.Applywallet;
   if (!User && Applywallet > 0) {
     const todaydate = new Date();
+    var currentOffset = todaydate.getTimezoneOffset();
+    var ISTOffset = 330; // IST offset UTC +5:30
+    var ISTTime = new Date(
+      todaydate.getTime() + (ISTOffset + currentOffset) * 60000
+    );
+    var hoursIST = ISTTime.getHours();
+    var minutesIST = ISTTime.getMinutes();
+    const secondIST = ISTTime.getSeconds();
     const today =
-      todaydate.getDate() +
+      ISTTime.getDate() +
       "/" +
-      (todaydate.getMonth() + 1) +
+      (ISTTime.getMonth() + 1) +
       "/" +
-      todaydate.getFullYear();
-    const current_time =
-      todaydate.getHours() +
-      ":" +
-      todaydate.getMinutes() +
-      ":" +
-      todaydate.getSeconds();
-
+      ISTTime.getFullYear();
+    const current_time = hoursIST + ":" + minutesIST + ":" + secondIST;
     const walletinfo = {
       CUST_ID: ID,
       Amount: Applywallet,
@@ -2079,18 +2085,23 @@ const AddAmountToWallet = asyncHandler(async (req, res) => {
   const ID = req.body.id;
   const amount = req.body.Amount;
   const todaydate = new Date();
+  var currentOffset = todaydate.getTimezoneOffset();
+  var ISTOffset = 330; // IST offset UTC +5:30
+  var ISTTime = new Date(
+    todaydate.getTime() + (ISTOffset + currentOffset) * 60000
+  );
+  var hoursIST = ISTTime.getHours();
+  var minutesIST = ISTTime.getMinutes();
+  const secondIST = ISTTime.getSeconds();
   const today =
-    todaydate.getDate() +
+    ISTTime.getDate() +
     "/" +
-    (todaydate.getMonth() + 1) +
+    (ISTTime.getMonth() + 1) +
     "/" +
-    todaydate.getFullYear();
-  const current_time =
-    todaydate.getHours() +
-    ":" +
-    todaydate.getMinutes() +
-    ":" +
-    todaydate.getSeconds();
+    ISTTime.getFullYear();
+  const current_time = hoursIST + ":" + minutesIST + ":" + secondIST;
+
+
   const walletinfo = {
     CUST_ID: ID,
     Amount: amount,
