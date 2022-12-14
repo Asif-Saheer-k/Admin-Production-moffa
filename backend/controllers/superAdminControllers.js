@@ -291,6 +291,7 @@ const viewAllProducts = asyncHandler(async (req, res) => {
     .get()
     .collection(collection.PRODUCT_COLLECTION)
     .find({ hidden: false })
+    .sort({ _id: -1 })
     .toArray();
   if (products) {
     res.status(200).json(products);
@@ -520,7 +521,6 @@ const DeleteDealOfTheDay = asyncHandler(async (req, res) => {
     .get()
     .collection(collection.DEAL_OF_THE_DAY)
     .deleteOne({ _id: objectId(DealId) });
-
   if (Deal) {
     res.status(200).json(Deal);
   } else {
@@ -711,6 +711,34 @@ const viewALLDispatchOrders = asyncHandler(async (req, res) => {
 const updatedWallet = asyncHandler(async (req, res) => {
   const ID = req.body.id;
   const amount = req.body.amoun;
+  const Wholesaler = await db
+    .get()
+    .collection(collection.WHOLESALER_COLLECTION)
+    .findOne({ _id: objectId(ID) });
+  const todaydate = new Date();
+  const today =
+    todaydate.getDate() +
+    "/" +
+    (todaydate.getMonth() + 1) +
+    "/" +
+    todaydate.getFullYear();
+  const current_time =
+    todaydate.getHours() +
+    ":" +
+    todaydate.getMinutes() +
+    ":" +
+    todaydate.getSeconds();
+  const walletinfo = {
+    CUST_ID: Wholesaler.CUST_ID,
+    Amount: amount,
+    Date: today,
+    Time: current_time,
+    status: "updated",
+  };
+  const wallet = await db
+    .get()
+    .collection(collection.WALLET_INFORMATION)
+    .insertOne(walletinfo);
   const updatewallet = await db
     .get()
     .collection(collection.WHOLESALER_COLLECTION)
@@ -765,6 +793,20 @@ const yesterdayOrders = asyncHandler(async (req, res) => {
     res.status(200).json("NO RECORDS");
   }
 });
+const ViewAllInformation = asyncHandler(async (req, res) => {
+  const walletInfo = await db
+    .get()
+    .collection(collection.WALLET_INFORMATION)
+    .find()
+    .sort({ _id: -1 })
+    .toArray();
+  console.log(walletInfo);
+  if (walletInfo) {
+    res.status(200).json(walletInfo);
+  } else {
+    res.status(200).json("NO RECORDS");
+  }
+});
 
 module.exports = {
   verifyAdmin,
@@ -803,4 +845,5 @@ module.exports = {
   updatedWallet,
   ChangeOrderStatus,
   yesterdayOrders,
+  ViewAllInformation,
 };

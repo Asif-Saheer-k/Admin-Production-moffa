@@ -11,7 +11,8 @@ module.exports={
     USER_WISHILIST_COLLECTION:'wishilist',
     STOCK_UPDATION_COLLECTION:'stock',
     DEAL_OF_THE_DAY:'dealDay',
-    BOTTOM_BANNER:'BottomBanner'
+    BOTTOM_BANNER:'BottomBanner',
+    WALLET_INFORMATION:'walletInfo'
     // BANNER_COLLECTION:'banner',
     // COUPON_COLLECTION:'coupon'
 } 

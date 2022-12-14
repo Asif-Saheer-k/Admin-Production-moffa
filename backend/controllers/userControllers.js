@@ -256,7 +256,7 @@ const loginUser = asyncHandler(async (req, res) => {
 const VerifyPhone = asyncHandler(async (req, res) => {
   const phoneNumber = req.body.phone;
   const OTP = Math.random().toFixed(6).split(".")[1];
-  console.log(OTP);
+
   const userDeatails = await db
     .get()
     .collection(collection.USER_COLLECTION)
@@ -265,11 +265,10 @@ const VerifyPhone = asyncHandler(async (req, res) => {
   if (userDeatails) {
     userDeatails["otp"] = OTP;
     // email otption hidded
-    if (userDeatails.email) {
+    if (userDeatails?.email) {
       email.sendMailOTP(userDeatails.email, OTP);
     }
     const code = sms.sendOTP(phoneNumber, OTP);
-
     if (code) {
       req.session.userverify = true;
       req.session.otpLogin = userDeatails;
@@ -284,6 +283,9 @@ const VerifyPhone = asyncHandler(async (req, res) => {
       .findOne({ phone: phoneNumber });
 
     if (wholesalerDeatails) {
+      if (wholesalerDeatails?.email) {
+        email.sendMailOTP(wholesalerDeatails.email, OTP);
+      }
       wholesalerDeatails.otp = OTP;
       req.session.userverify = false;
       req.session.otpLogin = wholesalerDeatails;
@@ -1883,9 +1885,6 @@ const verificationPayment = asyncHandler(async (req, res) => {
   let hmac = crypto.createHmac("sha256", process.env.SECRET_ID);
   hmac.update(razorpayOrderId + "|" + razorpayPaymentId);
   hmac = hmac.digest("hex");
-  const order = req.session.orderProducts;
-  order["razorpayPaymentId"] = razorpayPaymentId;
-  req.session.orderProducts = order;
   if (hmac == razorpaySignature) {
     res.status(200).json("Payment Success");
   } else {
@@ -1899,10 +1898,36 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
   const order = req.session.orderProducts;
   let Applywallet = req.session?.Applywallet;
   if (!User && Applywallet > 0) {
+    const todaydate = new Date();
+    const today =
+      todaydate.getDate() +
+      "/" +
+      (todaydate.getMonth() + 1) +
+      "/" +
+      todaydate.getFullYear();
+    const current_time =
+      todaydate.getHours() +
+      ":" +
+      todaydate.getMinutes() +
+      ":" +
+      todaydate.getSeconds();
+
+    const walletinfo = {
+      CUST_ID: ID,
+      Amount: Applywallet,
+      Date: today,
+      Time: current_time,
+      status: "Depited",
+    };
     const Apply = await db
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
       .updateOne({ CUST_ID: ID }, { $inc: { wallet: -parseInt(Applywallet) } });
+
+    const wallet = await db
+      .get()
+      .collection(collection.WALLET_INFORMATION)
+      .insertOne(walletinfo);
   }
   req.session.orderProducts.status = "Pending";
   req.session.orderProducts.Payment = "Success";
@@ -2053,6 +2078,31 @@ const AddAmountToWalletRazorpay = asyncHandler(async (req, res) => {
 const AddAmountToWallet = asyncHandler(async (req, res) => {
   const ID = req.body.id;
   const amount = req.body.Amount;
+  const todaydate = new Date();
+  const today =
+    todaydate.getDate() +
+    "/" +
+    (todaydate.getMonth() + 1) +
+    "/" +
+    todaydate.getFullYear();
+  const current_time =
+    todaydate.getHours() +
+    ":" +
+    todaydate.getMinutes() +
+    ":" +
+    todaydate.getSeconds();
+  const walletinfo = {
+    CUST_ID: ID,
+    Amount: amount,
+    Date: today,
+    Time: current_time,
+    status: "updated",
+  };
+
+  const wallet = await db
+    .get()
+    .collection(collection.WALLET_INFORMATION)
+    .insertOne(walletinfo);
   const updatewallet = await db
     .get()
     .collection(collection.WHOLESALER_COLLECTION)

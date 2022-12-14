@@ -37,7 +37,8 @@ const {
   viewALLDispatchOrders,
   updatedWallet,
   ChangeOrderStatus,
-  yesterdayOrders
+  yesterdayOrders,
+  ViewAllInformation
   
 } = require("../controllers/superAdminControllers");
 
@@ -117,6 +118,7 @@ router.route('/update-wholsaler-wallet').post(updatedWallet)
 router.route('/Change-order-status').post(verifyToken,ChangeOrderStatus)
 //yesterday order view
 router.route("/Yesterday-orders").post(verifyToken, yesterdayOrders)
+router.route("/view-all-wallet-info").get(verifyToken,ViewAllInformation)
 
 module.exports = router;  
    

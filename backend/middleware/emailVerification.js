@@ -1,9 +1,8 @@
 const nodemailer = require("nodemailer");
-const useremail = "asifsaheer7034@gmail.com";
-const password = "okwezuwkfxdykqph";
+const useremail = "thepaaki.aws@gmail.com";
+const password = "plecopzoesakshck";
 
 module.exports.sendMailOTP = (mail, otp) => {
-  console.log(mail, otp);
   var transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 465,
@@ -45,7 +44,7 @@ module.exports.sendOrderPlacedMail = (email) => {
   });
 
   var placedMail = {
-    from: "asifsaheer7034@gmail.com",
+    from: "thepaaki.aws@gmail.com",
     to: email,
     subject: "Thepaaki Online",
     text: "Thanks for shopping with us! Your order is confirmed and will be shipped shortly. Check your status here: https://thepaaki.com/ Regards Thepaaki Royal",
@@ -77,7 +76,7 @@ module.exports.sendDispatchMail = (
   });
 
   var dispatchmail = {
-    from: "asifsaheer7034@gmail.com",
+    from: "thepaaki.aws@gmail.com",
     to: email,
     subject: "Thepaaki Online ",
     text:
