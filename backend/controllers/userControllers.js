@@ -1923,7 +1923,7 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
       Amount: Applywallet,
       Date: today,
       Time: current_time,
-      status: "Depited",
+      status: "Debited",
     };
     const Apply = await db
       .get()
