@@ -63,7 +63,8 @@ module.exports.sendDispatchMail = (
   email,
   trackingCode,
   deliveryProvider,
-  link
+  link,
+  order_id
 ) => {
   var transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -80,7 +81,7 @@ module.exports.sendDispatchMail = (
     to: email,
     subject: "Thepaaki Online ",
     text:
-      "Great News! Your Order is on the way. Track your Shipment to see the delivery status " +
+      "Great News! Your Order " +order_id+" is on the way. Track your Shipment to see the delivery status " +
       deliveryProvider +
       " " +
       "Your tracking no is " +

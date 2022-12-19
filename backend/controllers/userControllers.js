@@ -256,7 +256,7 @@ const loginUser = asyncHandler(async (req, res) => {
 const VerifyPhone = asyncHandler(async (req, res) => {
   const phoneNumber = req.body.phone;
   const OTP = Math.random().toFixed(6).split(".")[1];
-
+  console.log(OTP);
   const userDeatails = await db
     .get()
     .collection(collection.USER_COLLECTION)
@@ -1788,7 +1788,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       .updateOne({ id: items.ProductID }, { $inc: { saleCount: 1 } });
   });
   const date = req.body.Date;
-  const Time=req.body?.Time
+  
   //create order object
   if (Applywallet > 0) {
     const OrderObject = {
@@ -1799,7 +1799,6 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       Address: address,
       FromAddress: fromAddress,
       Date: date,
-      Time:Time,
       user: user,
       role: Role,
       DeliveyCharge: DeliveyCharge,
@@ -1821,7 +1820,6 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         Address: address,
         Date: date,
         user: user,
-        Time:Time,
         role: Role,
         DeliveyCharge: DeliveyCharge,
         Courier: Service,
@@ -1840,7 +1838,6 @@ const createOrderObjct = asyncHandler(async (req, res) => {
         FromAddress: fromAddress,
         Date: date,
         user: user,
-        Time:Time,
         role: Role,
         DeliveyCharge: DeliveyCharge,
         Courier: Service,

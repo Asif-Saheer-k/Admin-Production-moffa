@@ -102,7 +102,7 @@ router.route("/get-mothly-sales").get(verifyToken,MonthlySalses)
 router.route('/view-all-bottom-banner').get(verifyToken,ViewBottomBanner)
 //edit bottom banner image
 router.route('/edit-bottom-banner').post(verifyToken,EditBottomBanner)
-//view all stocj
+//view all stock
 router.route('/view-outof-stock').get(verifyToken,getAllOutStock)
 //update stock routes
 router.route('/update-outof-stock').patch(verifyToken,UpdateStock)
@@ -118,6 +118,7 @@ router.route('/update-wholsaler-wallet').post(updatedWallet)
 router.route('/Change-order-status').post(verifyToken,ChangeOrderStatus)
 //yesterday order view
 router.route("/Yesterday-orders").post(verifyToken, yesterdayOrders)
+//view wallet information
 router.route("/view-all-wallet-info").get(verifyToken,ViewAllInformation)
 
 module.exports = router;  

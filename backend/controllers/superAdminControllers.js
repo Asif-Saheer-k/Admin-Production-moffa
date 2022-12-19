@@ -678,7 +678,7 @@ const DispatchOrder = asyncHandler(async (req, res) => {
   //email sendign
   const Email = req.body?.email;
   if (Email) {
-    EmailSending.sendDispatchMail(Email, TrackingID, DeleiveryProvider, Link);
+    EmailSending.sendDispatchMail(Email, TrackingID, DeleiveryProvider, Link,ORDER_ID);
   }
   sms.sendDispatchSMS(phone, ORDER_ID, TrackingID, Link, DeleiveryProvider);
   //change order status function
