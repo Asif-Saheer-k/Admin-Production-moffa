@@ -1788,7 +1788,7 @@ const createOrderObjct = asyncHandler(async (req, res) => {
       .updateOne({ id: items.ProductID }, { $inc: { saleCount: 1 } });
   });
   const date = req.body.Date;
-  
+
   //create order object
   if (Applywallet > 0) {
     const OrderObject = {
@@ -1863,7 +1863,12 @@ const createOrderObjct = asyncHandler(async (req, res) => {
 });
 
 const razorpayIntegration = asyncHandler(async (req, res) => {
-  const orderObject = req.session.orderProducts;
+  let orderObject;
+  if (req.session.orderProducts) {
+    orderObject = req.session.orderProducts;
+  } else {
+    orderObject = req.body;
+  }
   const amount = orderObject.Total;
   const userId = orderObject.CUST_ID;
   try {
@@ -1882,22 +1887,45 @@ const razorpayIntegration = asyncHandler(async (req, res) => {
 
 //razorpay payment verification function
 const verificationPayment = asyncHandler(async (req, res) => {
-  const { razorpaySignature, razorpayOrderId, razorpayPaymentId } = req.body;
-  let hmac = crypto.createHmac("sha256", process.env.SECRET_ID);
-  hmac.update(razorpayOrderId + "|" + razorpayPaymentId);
-  hmac = hmac.digest("hex");
-  if (hmac == razorpaySignature) {
-    res.status(200).json("Payment Success");
-  } else {
-    res.status(500).json("Payment Failed");
+  try {
+    // getting the details back from our font-end
+
+    const {
+      orderCreationId,
+      razorpayPaymentId,
+      razorpayOrderId,
+      razorpaySignature,
+    } = req.body;
+    const shasum = crypto.createHmac("sha256", process.env.SECRET_ID);
+    shasum.update(`${orderCreationId}|${razorpayPaymentId}`);
+    const digest = shasum.digest("hex");
+    if (digest !== razorpaySignature)
+      return res.status(400).json({ msg: "Transaction not legit!" });
+    res.status(200).json("Success");
+  } catch (error) {
+    res.status(500).send(error);
   }
 });
 
 const rezorpayOrder = asyncHandler(async (req, res) => {
-  const ID = req.session.orderProducts.CUST_ID;
-  const User = req.session.orderProducts.user;
-  const order = req.session.orderProducts;
-  let Applywallet = req.session?.Applywallet;
+  let order;
+  let ID;
+  let User;
+  let Applywallet;
+  if (req.session?.orderProducts) {
+    order = req.session.orderProducts;
+    ID = req.session.orderProducts.CUST_ID;
+    User = req.session.orderProducts.user;
+  } else {
+    order = req.body;
+    ID = req.body.CUST_ID;
+    User = req.body.user;
+  }
+  if (req.session?.Applywallet) {
+    Applywallet = req.session?.Applywallet;
+  } else if (req.body?.wallet) {
+    Applywallet = req.body?.wallet;
+  }
   if (!User && Applywallet > 0) {
     const todaydate = new Date();
     var currentOffset = todaydate.getTimezoneOffset();
@@ -1932,8 +1960,6 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
       .collection(collection.WALLET_INFORMATION)
       .insertOne(walletinfo);
   }
-  req.session.orderProducts.status = "Pending";
-  req.session.orderProducts.Payment = "Success";
   order.status = "Pending";
   order.Payment = "Success";
   order.dateIso = new Date();
@@ -2063,11 +2089,12 @@ const deleteuserCart = asyncHandler(async (req, res) => {
 //amount add to wallet through razorpay
 const AddAmountToWalletRazorpay = asyncHandler(async (req, res) => {
   const amount = req.body.Amount;
+  const userId = req.body.id;
   try {
     const options = {
       amount: amount * 100, // amount in smallest currency unit
       currency: "INR",
-      receipt: "receipt_order_74394",
+      receipt: `receipt_order_${userId}`,
     };
     const order = await razorpay.orders.create(options);
     if (!order) return res.status(500).send("Some error occured");
@@ -2097,8 +2124,6 @@ const AddAmountToWallet = asyncHandler(async (req, res) => {
     "/" +
     ISTTime.getFullYear();
   const current_time = hoursIST + ":" + minutesIST + ":" + secondIST;
-
-
   const walletinfo = {
     CUST_ID: ID,
     Amount: amount,
@@ -2106,7 +2131,6 @@ const AddAmountToWallet = asyncHandler(async (req, res) => {
     Time: current_time,
     status: "updated",
   };
-
   const wallet = await db
     .get()
     .collection(collection.WALLET_INFORMATION)

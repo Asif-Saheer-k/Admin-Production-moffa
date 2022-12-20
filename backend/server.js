@@ -5,12 +5,14 @@ const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const userRoutes = require("./routes/userRoutes");
 const superAdmin = require("./routes/superAdminRoutes");
+const cors=require('cors')
 const path = require("path");
 const { notFound, errorHandler } = require("./errormiddleware/errorMidlleware");
 const app = express();
 dotenv.config();
 app.use(express.json());
 app.use(cookieParser());
+app.use(cors())
 
 // app.use(notFound);
 // app.use(errorHandler);
