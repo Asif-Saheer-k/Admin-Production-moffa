@@ -685,11 +685,11 @@ const DispatchOrder = asyncHandler(async (req, res) => {
   const ChangeOrderStatus = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
-    .updateOne({ Id: parseInt(ORDER_ID) }, { $set: { status: "Dispatched" } });
+    .updateOne({ Id: parseInt(ORDER_ID) }, { $set: { status: TrackingID } });
   if (ChangeOrderStatus) {
     res.status(200).json("Success");
   } else {
-    res.status(500).json("Somthing Went Wrong");
+    res.status(500).json("Somthing Went Wrong");  
   }
 });
 //view all dispatch orders

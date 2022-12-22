@@ -1869,6 +1869,7 @@ const razorpayIntegration = asyncHandler(async (req, res) => {
   } else {
     orderObject = req.body;
   }
+  req.session.orderProducts=orderObject
   const amount = orderObject.Total;
   const userId = orderObject.CUST_ID;
   try {
@@ -1889,7 +1890,6 @@ const razorpayIntegration = asyncHandler(async (req, res) => {
 const verificationPayment = asyncHandler(async (req, res) => {
   try {
     // getting the details back from our font-end
-
     const {
       orderCreationId,
       razorpayPaymentId,
