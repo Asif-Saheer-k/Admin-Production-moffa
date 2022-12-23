@@ -678,7 +678,13 @@ const DispatchOrder = asyncHandler(async (req, res) => {
   //email sendign
   const Email = req.body?.email;
   if (Email) {
-    EmailSending.sendDispatchMail(Email, TrackingID, DeleiveryProvider, Link,ORDER_ID);
+    EmailSending.sendDispatchMail(
+      Email,
+      TrackingID,
+      DeleiveryProvider,
+      Link,
+      ORDER_ID
+    );
   }
   sms.sendDispatchSMS(phone, ORDER_ID, TrackingID, Link, DeleiveryProvider);
   //change order status function
@@ -689,7 +695,7 @@ const DispatchOrder = asyncHandler(async (req, res) => {
   if (ChangeOrderStatus) {
     res.status(200).json("Success");
   } else {
-    res.status(500).json("Somthing Went Wrong");  
+    res.status(500).json("Somthing Went Wrong");
   }
 });
 //view all dispatch orders
@@ -698,7 +704,7 @@ const viewALLDispatchOrders = asyncHandler(async (req, res) => {
   const findDispatchOrders = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
-    .find({ status: "Dispatched" })
+    .find({ status: { $ne: "Pending" } })
     .sort({ Id: -1 })
     .toArray();
   if (findDispatchOrders) {
