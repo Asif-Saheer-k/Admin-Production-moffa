@@ -1854,7 +1854,6 @@ const createOrderObjct = asyncHandler(async (req, res) => {
   //find quantity function
   const orderItems = req.session.orderProducts;
   var stock = true;
-
   if (stock) {
     res.status(200).json(orderItems);
   } else {
@@ -1869,7 +1868,6 @@ const razorpayIntegration = asyncHandler(async (req, res) => {
   } else {
     orderObject = req.body;
   }
-  req.session.orderProducts=orderObject
   const amount = orderObject.Total;
   const userId = orderObject.CUST_ID;
   try {
@@ -1879,6 +1877,12 @@ const razorpayIntegration = asyncHandler(async (req, res) => {
       receipt: `receipt_order_${userId}`,
     };
     const order = await razorpay.orders.create(options);
+    orderObject["razorpay_order_Id"] = order.id;
+    req.session.orderProducts = orderObject;
+    const createdOrder = await db
+      .get()
+      .collection(collection.CREATED_ORDER_RAZORPAY)
+      .insertOne(orderObject);
     if (!order) return res.status(500).send("Some error occured");
     res.status(200).json(order);
   } catch (error) {
@@ -1889,21 +1893,233 @@ const razorpayIntegration = asyncHandler(async (req, res) => {
 //razorpay payment verification function
 const verificationPayment = asyncHandler(async (req, res) => {
   try {
-    // getting the details back from our font-end
-    const {
-      orderCreationId,
-      razorpayPaymentId,
-      razorpayOrderId,
-      razorpaySignature,
-    } = req.body;
-    const shasum = crypto.createHmac("sha256", process.env.SECRET_ID);
-    shasum.update(`${orderCreationId}|${razorpayPaymentId}`);
-    const digest = shasum.digest("hex");
-    if (digest !== razorpaySignature)
-      return res.status(400).json({ msg: "Transaction not legit!" });
-    res.status(200).json("Success");
+    const signature = req.get("x-razorpay-signature");
+    if (!signature) res.send({ error: true, msg: "Payment Error" });
+    const isRequestValid = Razorpay.validateWebhookSignature(
+      JSON.stringify(req.body),
+      signature,
+      "asdfghjkl"
+    );
+    if (!isRequestValid) {
+      res.status(400).json("Somthing Went wrong");
+    }
+    const { order_id } = req.body.payload.payment.entity;
+    const takeorderObject = await db
+      .get()
+      .collection(collection.CREATED_ORDER_RAZORPAY)
+      .findOne({ razorpay_order_Id: order_id });
+    if (takeorderObject) {
+      if (takeorderObject?.addWallet) {
+        await db
+          .get()
+          .collection(collection.CREATED_ORDER_RAZORPAY)
+          .deleteOne({ razorpay_order_Id: order_id });
+        const ID = takeorderObject.userId;
+        const amount = takeorderObject.amount;
+        const todaydate = new Date();
+        var currentOffset = todaydate.getTimezoneOffset();
+        var ISTOffset = 330; // IST offset UTC +5:30
+        var ISTTime = new Date(
+          todaydate.getTime() + (ISTOffset + currentOffset) * 60000
+        );
+        var hoursIST = ISTTime.getHours();
+        var minutesIST = ISTTime.getMinutes();
+        const secondIST = ISTTime.getSeconds();
+        const today =
+          ISTTime.getDate() +
+          "/" +
+          (ISTTime.getMonth() + 1) +
+          "/" +
+          ISTTime.getFullYear();
+        const current_time = hoursIST + ":" + minutesIST + ":" + secondIST;
+        const walletinfo = {
+          CUST_ID: ID,
+          Amount: amount,
+          Date: today,
+          Time: current_time,
+          status: "updated",
+        };
+        const wallet = await db
+          .get()
+          .collection(collection.WALLET_INFORMATION)
+          .insertOne(walletinfo);
+        const updatewallet = await db
+          .get()
+          .collection(collection.WHOLESALER_COLLECTION)
+          .updateOne(
+            {
+              CUST_ID: parseInt(ID),
+            },
+            { $inc: { wallet: parseInt(amount) } }
+          );
+        if (updatewallet) {
+          res.status(200).json("Success");
+        } else {
+          res.status(500).json("Somthing Went wrong");
+        }
+      } else {
+        await db
+          .get()
+          .collection(collection.CREATED_ORDER_RAZORPAY)
+          .deleteOne({ razorpay_order_Id: order_id });
+        let order;
+        let ID;
+        let User;
+        let Applywallet;
+        order = takeorderObject;
+        ID = takeorderObject.CUST_ID;
+        User = takeorderObject?.user;
+        Applywallet = takeorderObject?.wallet;
+        if (!User && Applywallet > 0) {
+          const todaydate = new Date();
+          var currentOffset = todaydate.getTimezoneOffset();
+          var ISTOffset = 330; // IST offset UTC +5:30
+          var ISTTime = new Date(
+            todaydate.getTime() + (ISTOffset + currentOffset) * 60000
+          );
+          var hoursIST = ISTTime.getHours();
+          var minutesIST = ISTTime.getMinutes();
+          const secondIST = ISTTime.getSeconds();
+          const today =
+            ISTTime.getDate() +
+            "/" +
+            (ISTTime.getMonth() + 1) +
+            "/" +
+            ISTTime.getFullYear();
+          const current_time = hoursIST + ":" + minutesIST + ":" + secondIST;
+          const walletinfo = {
+            CUST_ID: ID,
+            Amount: Applywallet,
+            Date: today,
+            Time: current_time,
+            status: "Debited",
+          };
+          const Apply = await db
+            .get()
+            .collection(collection.WHOLESALER_COLLECTION)
+            .updateOne(
+              { CUST_ID: ID },
+              { $inc: { wallet: -parseInt(Applywallet) } }
+            );
+          const wallet = await db
+            .get()
+            .collection(collection.WALLET_INFORMATION)
+            .insertOne(walletinfo);
+        }
+        order.status = "Pending";
+        order.Payment = "Success";
+        order.dateIso = new Date();
+        order.Product.map(async (products) => {
+          const product = await db
+            .get()
+            .collection(collection.PRODUCT_COLLECTION)
+            .findOne({ id: products.ProductID });
+          product.variation.map(async (obj, indexes) => {
+            if (obj.color == products.color) {
+              obj.size.map(async (sizesObj, index) => {
+                if (sizesObj.name == products.size) {
+                  const updateStock = sizesObj.stock - products.quantity;
+                  if (updateStock == 0) {
+                    const obj = {
+                      ProductID: products.ProductID,
+                      color: products.color,
+                      size: products.size,
+                      stock: updateStock,
+                      variationindex: indexes,
+                      sizeindex: index,
+                    };
+                    await db
+                      .get()
+                      .collection(collection.STOCK_UPDATION_COLLECTION)
+                      .insertOne(obj);
+                  }
+                  if (updateStock >= 0) {
+                    const update = await db
+                      .get()
+                      .collection(collection.PRODUCT_COLLECTION)
+                      .updateOne(
+                        {
+                          id: products.ProductID,
+                          "variation.color": products.color,
+                          "variation.size.name": products.size,
+                        },
+                        {
+                          $set: {
+                            [`variation.${indexes}.size.${index}.stock`]:
+                              updateStock,
+                          },
+                        }
+                      );
+                  }
+                }
+              });
+            }
+          });
+        });
+        let smsphone;
+        let sendEmail;
+        let name;
+        if (order.user) {
+          const Take = await db
+            .get()
+            .collection(collection.USER_COLLECTION)
+            .findOne({ CUST_ID: parseInt(order.CUST_ID) });
+          smsphone = Take.phone;
+          sendEmail = Take?.email;
+          name = Take.name;
+        } else {
+          const Take = await db
+            .get()
+            .collection(collection.WHOLESALER_COLLECTION)
+            .findOne({ CUST_ID: parseInt(order.CUST_ID) });
+          smsphone = Take.phone;
+          sendEmail = Take?.email;
+          name = Take.name;
+        }
+        let OrdersId = await db
+          .get()
+          .collection(collection.ORDER_COLLECTION)
+          .find()
+          .sort({ _id: -1 })
+          .limit(1)
+          .toArray();
+        let OrderId;
+        let InvoceNO;
+        if (OrdersId[0]?.Id) {
+          OrderId = OrdersId[0].Id + 1;
+          const PR = OrdersId[0].InvoceNO.slice(5);
+          const inc = parseInt(PR) + 1;
+          InvoceNO = "MFA00" + inc;
+        } else {
+          OrderId = 130001;
+          InvoceNO = "MFA" + 001;
+        }
+        order["Id"] = OrderId;
+        order["InvoceNO"] = InvoceNO;
+        order["smsphone"] = smsphone;
+        order["userEmail"] = sendEmail;
+        order["orderName"] = name;
+        const success = await db
+          .get()
+          .collection(collection.ORDER_COLLECTION)
+          .insertOne(order);
+        if (success) {
+          if (smsphone) {
+            sms.sendOrderPlacedSMS(OrderId, smsphone);
+          }
+          if (sendEmail) {
+            email.sendOrderPlacedMail(sendEmail);
+          }
+          req.session.orderProducts = null;
+          req.session.Applywallet = null;
+          res.status(200).json("Success");
+        } else {
+          res.status(400).json("Somthing Went Wrong");
+        }
+      }
+    }
   } catch (error) {
-    res.status(500).send(error);
+    res.status(400).json("Somthing Went Wrong");
   }
 });
 
@@ -1954,7 +2170,6 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
       .get()
       .collection(collection.WHOLESALER_COLLECTION)
       .updateOne({ CUST_ID: ID }, { $inc: { wallet: -parseInt(Applywallet) } });
-
     const wallet = await db
       .get()
       .collection(collection.WALLET_INFORMATION)
@@ -1987,7 +2202,6 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
                 .collection(collection.STOCK_UPDATION_COLLECTION)
                 .insertOne(obj);
             }
-
             if (updateStock >= 0) {
               const update = await db
                 .get()
@@ -2010,7 +2224,6 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
       }
     });
   });
-
   let smsphone;
   let sendEmail;
   let name;
@@ -2097,6 +2310,14 @@ const AddAmountToWalletRazorpay = asyncHandler(async (req, res) => {
       receipt: `receipt_order_${userId}`,
     };
     const order = await razorpay.orders.create(options);
+    const razorpay_order_Id = order.id;
+    const obj = {
+      amount,
+      userId,
+      razorpay_order_Id,
+      addWallet: true,
+    };
+    await db.get().collection(collection.CREATED_ORDER_RAZORPAY).insertOne(obj);
     if (!order) return res.status(500).send("Some error occured");
     res.status(200).json(order);
   } catch (error) {
@@ -2153,7 +2374,6 @@ const AddAmountToWallet = asyncHandler(async (req, res) => {
 
 const CheckUserId = asyncHandler(async (req, res) => {
   const userid = req.body.userid;
-
   const user = await db
     .get()
     .collection(collection.USER_COLLECTION)

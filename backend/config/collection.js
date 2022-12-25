@@ -12,7 +12,8 @@ module.exports={
     STOCK_UPDATION_COLLECTION:'stock',
     DEAL_OF_THE_DAY:'dealDay',
     BOTTOM_BANNER:'BottomBanner',
-    WALLET_INFORMATION:'walletInfo'
+    WALLET_INFORMATION:'walletInfo',
+    CREATED_ORDER_RAZORPAY:'createdOrder'
     // BANNER_COLLECTION:'banner',
     // COUPON_COLLECTION:'coupon'
 } 

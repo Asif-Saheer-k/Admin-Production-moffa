@@ -744,10 +744,6 @@ const updatedWallet = asyncHandler(async (req, res) => {
     Time: current_time,
     status: "updated",
   };
-  const wallet = await db
-    .get()
-    .collection(collection.WALLET_INFORMATION)
-    .insertOne(walletinfo);
   const updatewallet = await db
     .get()
     .collection(collection.WHOLESALER_COLLECTION)
@@ -758,6 +754,10 @@ const updatedWallet = asyncHandler(async (req, res) => {
       { $set: { wallet: parseInt(amount) } }
     );
   if (updatewallet) {
+    const wallet = await db
+    .get()
+    .collection(collection.WALLET_INFORMATION)
+    .insertOne(walletinfo);
     res.status(200).json("Success");
   } else {
     res.status(500).json("Somthing Went wrong");
@@ -766,10 +766,6 @@ const updatedWallet = asyncHandler(async (req, res) => {
 const ChangeOrderStatus = asyncHandler(async (req, res) => {
   const newstatus = req.body.status;
   const order_id = req.body.orderId;
-  const deatails = await db
-    .get()
-    .collection(collection.ORDER_COLLECTION)
-    .findOne({});
   const change = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
