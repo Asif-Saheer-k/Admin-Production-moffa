@@ -2076,11 +2076,12 @@ const verificationPayment = asyncHandler(async (req, res) => {
           sendEmail = Take?.email;
           name = Take.name;
         }
+
         let OrdersId = await db
           .get()
           .collection(collection.ORDER_COLLECTION)
           .find()
-          .sort({ _id: -1 })
+          .sort({ Id: -1 })
           .limit(1)
           .toArray();
         let OrderId;
@@ -2093,6 +2094,29 @@ const verificationPayment = asyncHandler(async (req, res) => {
         } else {
           OrderId = 130001;
           InvoceNO = "MFA" + 001;
+        }
+        const checkOrderID = await db
+          .get()
+          .collection(collection.ORDER_COLLECTION)
+          .findOne({ Id: OrderId });
+        if (checkOrderID) {
+          console.log(checkOrderID);
+          OrdersId = await db
+            .get()
+            .collection(collection.ORDER_COLLECTION)
+            .find()
+            .sort({ Id: -1 })
+            .limit(1)
+            .toArray();
+          if (OrdersId[0]?.Id) {
+            OrderId = OrdersId[0].Id + 1;
+            const PR = OrdersId[0].InvoceNO.slice(5);
+            const inc = parseInt(PR) + 1;
+            InvoceNO = "MFA00" + inc;
+          } else {
+            OrderId = 130001;
+            InvoceNO = "MFA" + 001;
+          }
         }
         order["Id"] = OrderId;
         order["InvoceNO"] = InvoceNO;
@@ -2248,7 +2272,7 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
     .get()
     .collection(collection.ORDER_COLLECTION)
     .find()
-    .sort({ _id: -1 })
+    .sort({ Id: -1 })
     .limit(1)
     .toArray();
   let OrderId;
@@ -2262,11 +2286,35 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
     OrderId = 130001;
     InvoceNO = "MFA" + 001;
   }
+  const checkOrderID = await db
+    .get()
+    .collection(collection.ORDER_COLLECTION)
+    .findOne({ Id: OrderId });
+  if (checkOrderID) {
+    console.log(checkOrderID);
+    OrdersId = await db
+      .get()
+      .collection(collection.ORDER_COLLECTION)
+      .find()
+      .sort({ Id: -1 })
+      .limit(1)
+      .toArray();
+    if (OrdersId[0]?.Id) {
+      OrderId = OrdersId[0].Id + 1;
+      const PR = OrdersId[0].InvoceNO.slice(5);
+      const inc = parseInt(PR) + 1;
+      InvoceNO = "MFA00" + inc;
+    } else {
+      OrderId = 130001;
+      InvoceNO = "MFA" + 001;
+    }
+  }
   order["Id"] = OrderId;
   order["InvoceNO"] = InvoceNO;
   order["smsphone"] = smsphone;
   order["userEmail"] = sendEmail;
   order["orderName"] = name;
+
   const success = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
