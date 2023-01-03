@@ -2100,7 +2100,6 @@ const verificationPayment = asyncHandler(async (req, res) => {
           .collection(collection.ORDER_COLLECTION)
           .findOne({ Id: OrderId });
         if (checkOrderID) {
-          console.log(checkOrderID);
           OrdersId = await db
             .get()
             .collection(collection.ORDER_COLLECTION)
@@ -2291,7 +2290,6 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
     .collection(collection.ORDER_COLLECTION)
     .findOne({ Id: OrderId });
   if (checkOrderID) {
-    console.log(checkOrderID);
     OrdersId = await db
       .get()
       .collection(collection.ORDER_COLLECTION)
@@ -2304,9 +2302,6 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
       const PR = OrdersId[0].InvoceNO.slice(5);
       const inc = parseInt(PR) + 1;
       InvoceNO = "MFA00" + inc;
-    } else {
-      OrderId = 130001;
-      InvoceNO = "MFA" + 001;
     }
   }
   order["Id"] = OrderId;
@@ -2314,14 +2309,13 @@ const rezorpayOrder = asyncHandler(async (req, res) => {
   order["smsphone"] = smsphone;
   order["userEmail"] = sendEmail;
   order["orderName"] = name;
-
   const success = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
     .insertOne(order);
   if (success) {
     if (smsphone) {
-      sms.sendOrderPlacedSMS(OrderId, smsphone);
+      sms.sendOrderPlacedSMS(OrderId,smsphone);
     }
     if (sendEmail) {
       email.sendOrderPlacedMail(sendEmail);
