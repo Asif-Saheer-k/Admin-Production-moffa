@@ -1,5 +1,6 @@
 const express = require("express");
-const {verifyToken} =require("../middleware/tokenVerification")
+const { verifyToken } = require("../middleware/tokenVerification");
+const fileUploade = require("express-fileupload");
 const router = express.Router();
 const {
   verifyAdmin,
@@ -38,14 +39,14 @@ const {
   updatedWallet,
   ChangeOrderStatus,
   yesterdayOrders,
-  ViewAllInformation
-  
+  ViewAllInformation,
+  ImageUploading,
 } = require("../controllers/superAdminControllers");
 
 //super Admin login function
 router.route("/login").post(verifyAdmin);
 //view all users
-router.route("/viewAlluser").get(verifyToken,viewAllUser);
+router.route("/viewAlluser").get(verifyToken, viewAllUser);
 //deleter user routes
 router.route("/delete-user/:id").post(verifyToken, deleteuser);
 //make wholesaler wholesalers
@@ -53,7 +54,7 @@ router.route("/wholesaler/:id").post(verifyToken, makeWholesaler);
 //view all wholesalers
 router.route("/all-wholesaler").get(verifyToken, viewAllWholsalers);
 //convent wholesaler to user function
-router.route("/convert-user/:id").post(verifyToken, makeUser);   
+router.route("/convert-user/:id").post(verifyToken, makeUser);
 //make admin
 router.route("/add-admin").post(verifyToken, MakeAdmin);
 //view all admin
@@ -76,12 +77,12 @@ router.route("/view-all-orders").get(verifyToken, getAllOrders);
 router.route("/view-single-order/:id").get(verifyToken, getSingleOrder);
 //view single products routes
 router.route("/get-sinlge-Produt/:id").get(getSingleProduct);
-//edit produts routs 
-router.route("/Edit-Produts/:id").post(EditProducts)
+//edit produts routs
+router.route("/Edit-Produts/:id").post(EditProducts);
 //delete products
-router.route("/delete-produt/:id").post(deleteProduct)
-//get deal of the day 
-router.route("/add-deal-day").post(verifyToken,AddDealOfTheDay)
+router.route("/delete-produt/:id").post(deleteProduct);
+//get deal of the day
+router.route("/add-deal-day").post(verifyToken, AddDealOfTheDay);
 //view All wholesaler
 router.route("/viewAllWholesalers").get(viewAllWholsalers);
 //view all wholesaler request
@@ -89,37 +90,40 @@ router.route("/viewAllWholesalersRequset").get(viewAllWholesalersRequest);
 //verify wholesalers function
 router.route("/viewAllWholesalersRequset/verify/:id").post(verifyWholesalers);
 //delete products from product
-router.route("/deleteProduct/:Id").post(verifyToken,deleteProduct);
+router.route("/deleteProduct/:Id").post(verifyToken, deleteProduct);
 //view all Deal of the Days
-router.route("/view-all-deals-day").get(verifyToken,viewAllDealofTheDay)
+router.route("/view-all-deals-day").get(verifyToken, viewAllDealofTheDay);
 //delete Deal of the Day Produts
-router.route("/delete-Deal-Day-Offer/:id").delete(DeleteDealOfTheDay)
+router.route("/delete-Deal-Day-Offer/:id").delete(DeleteDealOfTheDay);
 //get total revenue
-router.route("/view-total-amount").get(verifyToken,TotalRevanue)
+router.route("/view-total-amount").get(verifyToken, TotalRevanue);
 //get monthly sales reports
-router.route("/get-mothly-sales").get(verifyToken,MonthlySalses)
+router.route("/get-mothly-sales").get(verifyToken, MonthlySalses);
 //get all bottom banner images
-router.route('/view-all-bottom-banner').get(verifyToken,ViewBottomBanner)
+router.route("/view-all-bottom-banner").get(verifyToken,ViewBottomBanner);
 //edit bottom banner image
-router.route('/edit-bottom-banner').post(verifyToken,EditBottomBanner)
+router.route("/edit-bottom-banner").post(verifyToken, EditBottomBanner);
 //view all stock
-router.route('/view-outof-stock').get(verifyToken,getAllOutStock)
+router.route("/view-outof-stock").get(verifyToken, getAllOutStock);
 //update stock routes
-router.route('/update-outof-stock').patch(verifyToken,UpdateStock)
+router.route("/update-outof-stock").patch(verifyToken, UpdateStock);
 //delete stock updation
-router.route('/delete-outof-stock').post(verifyToken,DeleteStock)
+router.route("/delete-outof-stock").post(verifyToken, DeleteStock);
 //order dispatch function
-router.route('/dispatch-order').post(verifyToken,DispatchOrder)
+router.route("/dispatch-order").post(verifyToken, DispatchOrder);
 //view dispatch orders
-router.route('/view-dispatch-orders').get(verifyToken,viewALLDispatchOrders)
+router.route("/view-dispatch-orders").get(verifyToken,viewALLDispatchOrders);
 //change wholsaler wallet amount
-router.route('/update-wholsaler-wallet').post(updatedWallet)
-//change order status 
-router.route('/Change-order-status').post(verifyToken,ChangeOrderStatus)
+router.route("/update-wholsaler-wallet").post(updatedWallet);
+//change order status
+router.route("/Change-order-status").post(verifyToken, ChangeOrderStatus);
 //yesterday order view
-router.route("/Yesterday-orders").post(verifyToken, yesterdayOrders)
+router.route("/Yesterday-orders").post(verifyToken, yesterdayOrders);
 //view wallet information
-router.route("/view-all-wallet-info").get(verifyToken,ViewAllInformation)
+router.route("/view-all-wallet-info").get(verifyToken, ViewAllInformation);
+//image uploading
+// router
+//   .route("/image-uploading", fileUploade({ createParentPath: true }))
+//   .post(ImageUploading);
 
-module.exports = router;  
-   
+module.exports = router;

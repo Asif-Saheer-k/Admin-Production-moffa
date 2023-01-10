@@ -5,6 +5,7 @@ const generateToken = require("../utils/jwtToken");
 const EmailSending = require("../middleware/emailVerification");
 const sms = require("../middleware/sms");
 const collection = require("../config/collection");
+const fileUploade = require("express-fileupload");
 const objectId = require("mongodb").ObjectId;
 const verification = require("../middleware/tiwllioVerification");
 
@@ -704,13 +705,26 @@ const viewALLDispatchOrders = asyncHandler(async (req, res) => {
   const findDispatchOrders = await db
     .get()
     .collection(collection.ORDER_COLLECTION)
-    .find({ status: { $ne: "Pending" } })
-    .sort({ Id: -1 })
+    .aggregate([
+      {
+        $project: {
+          _id: 1,
+          Date: 1,
+          Id: 1,
+          CUST_ID: 1,
+          Total: 1,
+          status: 1,
+          Payment: 1,
+        },
+      },
+      { $match: { $expr: { $ne: [{ $getField: "status" }, "Pending"] } } },
+      { $sort: { _id: -1 } },
+    ])
     .toArray();
   if (findDispatchOrders) {
     res.status(200).json(findDispatchOrders);
   } else {
-    res.status(204).json("No Records");
+    res.status(404).json("No Records");
   }
 });
 //updated wholsaler wallet function
@@ -811,6 +825,40 @@ const ViewAllInformation = asyncHandler(async (req, res) => {
     res.status(200).json("NO RECORDS");
   }
 });
+const ImageUploading = asyncHandler(async (req, res) => {
+  let images = [];
+  if (req.files.file && req.files.file.length > 0) {
+    for (let i = 0; i < req.files.file.length; i++) {
+      console.log(req.files.file[i]);
+      uploadS3(req.files.file[i].data)
+        .then((result) => {
+          const obj = {
+            url: result.Location,
+            key: result.Key,
+          };
+          images.push(obj);
+          if (images.length == req.files.file.length) {
+            res.status(200).json(images);
+          }
+        })
+        .catch((error) => {
+          res.status(400).json("Something went wrong");
+        });
+    }
+  } else {
+    uploadS3(req.files.file.data)
+      .then((result) => {
+        const obj = {
+          url: result.Location,
+          key: result.Key,
+        };
+        res.status(200).json(obj);
+      })
+      .catch((error) => {
+        res.status(400).json("Something went wrong");
+      });
+  }
+});
 
 module.exports = {
   verifyAdmin,
@@ -850,4 +898,5 @@ module.exports = {
   ChangeOrderStatus,
   yesterdayOrders,
   ViewAllInformation,
+  ImageUploading,
 };

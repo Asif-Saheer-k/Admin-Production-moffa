@@ -10,6 +10,7 @@ const path = require("path");
 const { notFound, errorHandler } = require("./errormiddleware/errorMidlleware");
 const app = express();
 dotenv.config();
+app.use(express.urlencoded({ extended: true}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors())
